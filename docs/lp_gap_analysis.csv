@@ -1,0 +1,18 @@
+ID,カテゴリ,機能名,LP記載箇所,現状,優先度案,備考
+1,キャプチャ,ウィンドウキャプチャ,Free機能・Value Props,エンジン実装済み/UI未接続,高,capture engineにcapture_window()あり。トレイ・ホットキーの接続のみ
+2,キャプチャ,OCRテキスト抽出,Free機能・Value Props・FAQ,未実装,高,uni-ocrクレートは選定済みだが依存未追加。LP最大の訴求ポイント
+3,キャプチャ,バーストモード（連続撮影）,Pro機能・ユースケース,未実装,中,「5枚10枚を1コマンドで」とLP記載
+4,キャプチャ,GIF & 動画キャプチャ,Pro機能・Value Props・ヒーロー,未実装,中,gaze record --duration 10がヒーローデモに表示。gifski依存は選定済み
+5,セキュリティ,スマートマスキング（PII自動除去）,Pro機能・セキュリティセクション,UIトグルのみ/処理未実装,高,gaze maskとしてCLIパイプにも登場。LP差別化の柱
+6,CLI,CLIインターフェース全般,ヒーロー・MCP・FAQ・CTA,未実装,最高,gaze capture / gaze ocr / gaze mask / gaze watch。LP全体がCLI中心の訴求
+7,CLI,gaze watch（画面監視・差分検知）,ユースケース,未実装,低,「変更を検知したらOCRで差分取得」。CLI+OCR依存
+8,エージェント連携,MCPサーバー,Pro機能・MCPセクション,未実装,高,「CLI & MCPサーバー」としてPro機能に明記
+9,配布,brew install gaze,ヒーロー・FAQ・CTA,未対応,高,LP全体で繰り返し言及。Homebrew tap/formula未作成
+10,配布,ダウンロード・自動アップデート,CTA・Pricing,未対応,高,ダウンロードボタン・Proサブスクの「常に最新版に自動アップデート」
+11,課金,ライセンス・課金システム,Pricing全体,未実装,中,Free(50回/月制限)・Pro買い切り$29・サブスク$39/year
+12,課金,利用回数カウント・制限,Free機能,未実装,中,「月50回」のフリーティア制限
+13,B2B,チーム管理画面,Teamプラン,未実装,低,設定共有・利用状況確認・ボリューム割引
+14,B2B,Enterprise（SSO/SCIM/監査ログ）,Enterpriseプラン,未実装,低,SAML/OIDC・SCIMプロビジョニング・データ保持ポリシー
+15,設定,ショートカットのカスタマイズ,設定UI,UI表示のみ/ハードコード,低,settings.rsに値あるがlib.rsで読み込んでいない
+16,設定,起動時に自動起動,設定UI,UIトグルのみ/macOS登録未実装,低,launch_at_loginがmacOS login itemsに未登録
+17,プラットフォーム,Windows対応,LP暗黙（Mac/Windows）,スタブのみ,低,windows.rsは全メソッドNotImplementedエラー

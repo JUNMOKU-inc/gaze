@@ -1,0 +1,371 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# Workflow-level minimum; jobs that need write override below.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # -------------------------------------------------------
+  # 1. GitHub Release をドラフト作成
+  # -------------------------------------------------------
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: meta
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create draft release
+        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # -------------------------------------------------------
+  # 2. macOS CLI バイナリビルド (aarch64 + x86_64)
+  # -------------------------------------------------------
+  build-cli:
+    needs: create-release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build CLI
+        run: cargo build --release --package gaze-cli --target ${{ matrix.target }}
+        env:
+          SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
+      - name: Strip and package
+        run: |
+          strip target/${{ matrix.target }}/release/gaze
+          tar czf gaze-v${{ needs.create-release.outputs.version }}-${{ matrix.target }}.tar.gz \
+            -C target/${{ matrix.target }}/release gaze
+
+      - name: Upload to release
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            gaze-v${{ needs.create-release.outputs.version }}-${{ matrix.target }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # -------------------------------------------------------
+  # 3. macOS .pkg インストーラ (GUI app + CLI)
+  # -------------------------------------------------------
+  build-pkg:
+    needs: [create-release, build-cli]
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    outputs:
+      sha256: ${{ steps.pkg_hash.outputs.sha256 }}
+    env:
+      APPLE_TEAM_ID:      ${{ secrets.APPLE_TEAM_ID }}
+      APP_IDENTITY:       "Developer ID Application: JUMMOKU K.K (${{ secrets.APPLE_TEAM_ID }})"
+      INSTALLER_IDENTITY: "Developer ID Installer: JUMMOKU K.K (${{ secrets.APPLE_TEAM_ID }})"
+      VERSION:            ${{ needs.create-release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      # --- Import Apple Developer ID certificates into a temporary keychain ---
+      - name: Import signing certificates
+        env:
+          APP_CERT_B64:  ${{ secrets.APPLE_APP_CERT_P12_BASE64 }}
+          APP_CERT_PW:   ${{ secrets.APPLE_APP_CERT_PASSWORD }}
+          INST_CERT_B64: ${{ secrets.APPLE_INSTALLER_CERT_P12_BASE64 }}
+          INST_CERT_PW:  ${{ secrets.APPLE_INSTALLER_CERT_PASSWORD }}
+          KC_PW:         ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KC=build.keychain
+          security create-keychain -p "$KC_PW" "$KC"
+          security default-keychain -s "$KC"
+          security unlock-keychain  -p "$KC_PW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+
+          # printf '%s' avoids echo's option/escape interpretation and trailing newline.
+          printf '%s' "$APP_CERT_B64"  | base64 -d > app.p12
+          printf '%s' "$INST_CERT_B64" | base64 -d > inst.p12
+
+          security import app.p12  -k "$KC" -P "$APP_CERT_PW"  -T /usr/bin/codesign -T /usr/bin/productbuild
+          security import inst.p12 -k "$KC" -P "$INST_CERT_PW" -T /usr/bin/codesign -T /usr/bin/productbuild -T /usr/bin/productsign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KC_PW" "$KC"
+
+          rm -f app.p12 inst.p12
+          security find-identity -v -p codesigning "$KC"
+
+      # --- Build Tauri GUI app (universal) ---
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --locked
+
+      - name: Build Tauri app (aarch64)
+        run: cargo tauri build --target aarch64-apple-darwin --bundles app
+        env:
+          SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
+      - name: Build Tauri app (x86_64)
+        run: cargo tauri build --target x86_64-apple-darwin --bundles app
+        env:
+          SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
+      - name: Create universal Tauri app
+        run: |
+          set -euo pipefail
+          ARM_APP="target/aarch64-apple-darwin/release/bundle/macos/gaze.app"
+          X86_APP="target/x86_64-apple-darwin/release/bundle/macos/gaze.app"
+
+          # Copy arm64 app as base
+          cp -R "$ARM_APP" Gaze.app
+
+          # Find the actual binary name inside the bundle
+          BIN_NAME=$(ls "$ARM_APP/Contents/MacOS/")
+          echo "Binary name: $BIN_NAME"
+
+          # Replace the binary with a universal binary
+          lipo -create \
+            "$ARM_APP/Contents/MacOS/$BIN_NAME" \
+            "$X86_APP/Contents/MacOS/$BIN_NAME" \
+            -output "Gaze.app/Contents/MacOS/$BIN_NAME"
+
+          lipo -info "Gaze.app/Contents/MacOS/$BIN_NAME"
+
+      - name: Sign .app bundle
+        run: |
+          set -euo pipefail
+          # Sign inner binaries/frameworks first if any (deep), then re-sign the bundle
+          codesign --force --deep --options runtime \
+            --entitlements src-tauri/Entitlements.plist \
+            --timestamp \
+            --sign "$APP_IDENTITY" \
+            Gaze.app
+
+          codesign --verify --strict --verbose=2 Gaze.app
+
+      # --- Download pre-built CLI binaries ---
+      - name: Download CLI binaries
+        run: |
+          set -euo pipefail
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            gh release download "$GITHUB_REF_NAME" \
+              --pattern "gaze-v${VERSION}-${target}.tar.gz" \
+              --dir dl
+            mkdir -p "cli-bin/${target}"
+            tar xzf "dl/gaze-v${VERSION}-${target}.tar.gz" -C "cli-bin/${target}"
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create universal CLI binary
+        run: |
+          set -euo pipefail
+          lipo -create \
+            cli-bin/aarch64-apple-darwin/gaze \
+            cli-bin/x86_64-apple-darwin/gaze \
+            -output gaze-cli-universal
+          chmod +x gaze-cli-universal
+
+      - name: Sign CLI binary
+        run: |
+          set -euo pipefail
+          codesign --force --options runtime \
+            --timestamp \
+            --sign "$APP_IDENTITY" \
+            gaze-cli-universal
+          codesign --verify --strict --verbose=2 gaze-cli-universal
+
+      # --- Build .pkg ---
+      - name: Build component packages
+        run: |
+          set -euo pipefail
+          # Component 1: GUI app → /Applications/Gaze.app
+          pkgbuild \
+            --component Gaze.app \
+            --install-location /Applications \
+            --identifier dev.gazeapp.gaze \
+            --version "$VERSION" \
+            gaze-app.pkg
+
+          # Component 2: CLI → /usr/local/bin/gaze
+          mkdir -p cli-root/usr/local/bin
+          cp gaze-cli-universal cli-root/usr/local/bin/gaze
+          # Sanity-check that the copied binary is still validly signed.
+          codesign --verify --strict --verbose=2 cli-root/usr/local/bin/gaze
+          pkgbuild \
+            --root cli-root \
+            --identifier dev.gazeapp.gaze.cli \
+            --version "$VERSION" \
+            --install-location / \
+            gaze-cli.pkg
+
+      - name: Create distribution .pkg
+        run: |
+          set -euo pipefail
+          cat > distribution.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <installer-gui-script minSpecVersion="2">
+            <title>Gaze</title>
+            <welcome mime-type="text/plain"><![CDATA[Gaze — LLM-optimized screen capture
+
+          Installs:
+            • Gaze.app → /Applications (menu bar app)
+            • gaze CLI  → /usr/local/bin
+
+          After installation:
+            • Launch Gaze.app from Applications
+            • Or use "gaze" from the terminal]]></welcome>
+            <pkg-ref id="dev.gazeapp.gaze"/>
+            <pkg-ref id="dev.gazeapp.gaze.cli"/>
+            <options customize="never" require-scripts="false"/>
+            <choices-outline>
+              <line choice="app"/>
+              <line choice="cli"/>
+            </choices-outline>
+            <choice id="app" title="Gaze.app (Menu Bar)">
+              <pkg-ref id="dev.gazeapp.gaze"/>
+            </choice>
+            <choice id="cli" title="Gaze CLI (/usr/local/bin)">
+              <pkg-ref id="dev.gazeapp.gaze.cli"/>
+            </choice>
+            <pkg-ref id="dev.gazeapp.gaze" onConclusion="none">gaze-app.pkg</pkg-ref>
+            <pkg-ref id="dev.gazeapp.gaze.cli" onConclusion="none">gaze-cli.pkg</pkg-ref>
+          </installer-gui-script>
+          EOF
+          productbuild \
+            --distribution distribution.xml \
+            --package-path . \
+            --sign "$INSTALLER_IDENTITY" \
+            --timestamp \
+            "gaze-v${VERSION}.pkg"
+          pkgutil --check-signature "gaze-v${VERSION}.pkg"
+
+      - name: Notarize .pkg
+        env:
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+          API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          # umask must be set BEFORE mkdir so the directory itself is 0700.
+          umask 077
+          KEY_DIR="$RUNNER_TEMP/asc_keys"
+          mkdir -p "$KEY_DIR"
+          chmod 700 "$KEY_DIR"
+          KEY_PATH="$KEY_DIR/AuthKey_${API_KEY_ID}.p8"
+          printf '%s' "$API_KEY_P8" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+          xcrun notarytool submit "gaze-v${VERSION}.pkg" \
+            --key "$KEY_PATH" \
+            --key-id  "$API_KEY_ID" \
+            --issuer  "$API_ISSUER" \
+            --wait
+
+          xcrun stapler staple "gaze-v${VERSION}.pkg"
+          xcrun stapler validate "gaze-v${VERSION}.pkg"
+          # spctl assess は notary 反映遅延で稀に偽陰性を出すため fail にせず警告化。
+          # stapler validate が成功している時点で配布要件は満たしている。
+          spctl --assess --type install --verbose=2 "gaze-v${VERSION}.pkg" \
+            || echo "::warning::spctl assess returned non-zero (notary propagation delay?). stapler validate passed, so the pkg ships."
+
+      # SHA256 を notarize+staple 済みの最終 .pkg に対して計算し、
+      # update-cask が再ダウンロードせず参照できるよう job output に出す。
+      - name: Compute .pkg SHA256
+        id: pkg_hash
+        run: |
+          set -euo pipefail
+          SHA=$(shasum -a 256 "gaze-v${VERSION}.pkg" | cut -d' ' -f1)
+          if [ -z "$SHA" ] || [ ${#SHA} -ne 64 ]; then
+            echo "::error::Failed to compute SHA256 for gaze-v${VERSION}.pkg (got: '$SHA')"
+            exit 1
+          fi
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "pkg sha256: $SHA"
+
+      - name: Upload .pkg to release
+        run: gh release upload "$GITHUB_REF_NAME" "gaze-v${VERSION}.pkg"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 機密情報 (一時 keychain と notary 用 .p8) は必ず削除する。
+      # macos-latest は ephemeral ランナーだが、ステップ失敗時の漏洩面を最小化。
+      - name: Cleanup secrets
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+          rm -f "$RUNNER_TEMP"/asc_keys/AuthKey_*.p8 2>/dev/null || true
+          rmdir  "$RUNNER_TEMP"/asc_keys 2>/dev/null || true
+
+  # -------------------------------------------------------
+  # 4. ドラフトを正式公開
+  # -------------------------------------------------------
+  publish-release:
+    needs: [create-release, build-cli, build-pkg]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload install script
+        run: gh release upload "$GITHUB_REF_NAME" scripts/install.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish release
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # -------------------------------------------------------
+  # 5. Homebrew Cask 更新ディスパッチ
+  # -------------------------------------------------------
+  # build-pkg.outputs.sha256 を使うことで:
+  #   - publish 直後の release CDN 伝播を待たずに済む
+  #   - notary+staple 済みの .pkg と Cask に書く SHA を確実に一致させる
+  #   - 再ダウンロード不要 (TOFU リスクを排除)
+  update-cask:
+    needs: [create-release, build-pkg, publish-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Dispatch cask update event
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          repository: RQ-Akiyoshi/homebrew-gaze
+          event-type: update-cask
+          client-payload: |
+            {
+              "version": "${{ needs.create-release.outputs.version }}",
+              "sha256":  "${{ needs.build-pkg.outputs.sha256 }}"
+            }

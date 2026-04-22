@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms of Service — Gaze</title>
+    <link rel="canonical" href="https://gaze.dev/terms" />
+    <link rel="alternate" hreflang="en" href="https://gaze.dev/terms" />
+    <link rel="alternate" hreflang="ja" href="https://gaze.dev/ja/terms" />
+    <link rel="alternate" hreflang="x-default" href="https://gaze.dev/terms" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #ffffff;
+        --bg-secondary: #f8fafc;
+        --text: #0f172a;
+        --text-secondary: #475569;
+        --text-tertiary: #64748b;
+        --accent: #2563eb;
+        --accent-light: #3b82f6;
+        --border: #e2e8f0;
+        --border-light: #cbd5e1;
+        --radius-sm: 10px;
+        --max-width: 1200px;
+        --nav-height: 64px;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      /* ========== Nav ========== */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--nav-height);
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border-bottom: 1px solid var(--border);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+      }
+
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 32px;
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 1.125rem;
+        letter-spacing: -0.02em;
+        color: var(--text);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        list-style: none;
+      }
+
+      .nav-links a {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover {
+        color: var(--text);
+      }
+
+      .nav-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s,
+          background 0.15s;
+      }
+
+      .nav-cta:hover {
+        transform: scale(1.03);
+        background: var(--accent-light);
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      }
+
+      /* ========== Content ========== */
+      .doc-content {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 120px 24px 80px;
+      }
+
+      .doc-content h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
+
+      .doc-meta {
+        font-size: 0.875rem;
+        color: var(--text-tertiary);
+        margin-bottom: 48px;
+      }
+
+      .doc-content h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-top: 40px;
+        margin-bottom: 16px;
+      }
+
+      .doc-content h3 {
+        font-size: 1.0625rem;
+        font-weight: 600;
+        margin-top: 24px;
+        margin-bottom: 12px;
+      }
+
+      .doc-content p {
+        font-size: 0.9375rem;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+        line-height: 1.8;
+      }
+
+      .doc-content ul {
+        padding-left: 24px;
+        margin-bottom: 16px;
+      }
+
+      .doc-content li {
+        font-size: 0.9375rem;
+        color: var(--text-secondary);
+        line-height: 1.8;
+        margin-bottom: 4px;
+      }
+
+      /* ========== Footer ========== */
+      footer {
+        background: var(--bg-secondary);
+        padding: 32px 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .footer-inner {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .footer-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text);
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 24px;
+        list-style: none;
+      }
+
+      .footer-links a {
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+        transition: color 0.2s;
+      }
+
+      .footer-links a:hover {
+        color: var(--text);
+      }
+
+      .footer-copy {
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+      }
+
+      /* ========== Responsive ========== */
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+        .nav-cta {
+          display: none;
+        }
+        .doc-content {
+          padding: 100px 16px 60px;
+        }
+        .footer-inner {
+          flex-direction: column;
+          text-align: center;
+        }
+      }
+      .nav-lang {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+        margin-right: 12px;
+      }
+      .nav-lang a,
+      .nav-lang [aria-current="true"] {
+        padding: 4px 8px;
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+      .nav-lang a {
+        transition: color 0.15s;
+      }
+      .nav-lang a:hover {
+        color: var(--text);
+      }
+      .nav-lang [aria-current="true"] {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .nav-lang .lang-sep {
+        color: var(--border-light);
+        padding: 0 2px;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <nav aria-label="Main navigation">
+      <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
+          <svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="nav-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0" stop-color="#06b6d4" />
+                <stop offset="1" stop-color="#2563eb" />
+              </linearGradient>
+            </defs>
+            <rect fill="url(#nav-logo-grad)" height="480" rx="96" width="480" x="16" y="16" />
+            <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="26">
+              <path d="m108 200v-80h80" />
+              <path d="m324 120h80v80" />
+              <path d="m108 312v80h80" />
+              <path d="m324 392h80v-80" />
+            </g>
+            <path d="m256 186c0 50 0 50-52 70 52 20 52 20 52 70 14-50 14-50 60-70-46-20-46-20-60-70z" fill="#fff" />
+            <path
+              d="m310 192c0 20 0 20-20 26 20 6 20 6 20 26 6-20 6-20 26-26-20-6-20-6-26-26z"
+              fill="#fff"
+              opacity=".7"
+            />
+          </svg>
+          Gaze
+        </a>
+        <ul class="nav-links">
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
+        </ul>
+        <div class="nav-lang" aria-label="Language">
+          <span aria-current="true">EN</span>
+          <span class="lang-sep">/</span>
+          <a href="ja/terms.html" hreflang="ja" rel="alternate">JA</a>
+        </div>
+
+        <a href="index.html#pricing" class="nav-cta">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Download
+        </a>
+      </div>
+    </nav>
+
+    <main class="doc-content">
+      <h1>Terms of Service</h1>
+      <p class="doc-meta">Last updated: March 27, 2026</p>
+
+      <h2>1. Introduction</h2>
+      <p>
+        These Terms govern your use of Gaze (the "Service"). By downloading or using the Service, you agree to be bound
+        by these Terms.
+      </p>
+
+      <h2>2. The Service</h2>
+      <p>
+        The Service is a desktop application that provides screen capture, OCR text extraction, image processing, and
+        related functionality.
+      </p>
+
+      <h2>3. License</h2>
+
+      <h3>3.1 Free</h3>
+      <p>You may use the Service free of charge for up to 50 captures per month.</p>
+
+      <h3>3.2 Pro (Buy Once)</h3>
+      <p>
+        A perpetual license is available for $29. Each license permits use on up to two devices and includes one year of
+        updates from the date of purchase.
+      </p>
+
+      <h3>3.3 Pro (Subscription)</h3>
+      <p>
+        The latest version is available for $39/year or $4.99/month. You must stop using the Service immediately upon
+        cancellation.
+      </p>
+
+      <h3>3.4 Team / Enterprise</h3>
+      <p>Use is subject to the applicable separate agreement.</p>
+
+      <h2>4. Prohibited Conduct</h2>
+      <ul>
+        <li>Reverse engineering, decompiling, or disassembling the Service</li>
+        <li>Redistributing or reselling the Service</li>
+        <li>Using the Service for any unlawful purpose</li>
+        <li>Using the Service to infringe on the privacy of others</li>
+      </ul>
+
+      <h2>5. Intellectual Property</h2>
+      <p>All intellectual property rights in the Service belong to us.</p>
+
+      <h2>6. Disclaimer</h2>
+      <p>
+        The Service is provided "as is." We make no warranty as to the completeness, accuracy, or usefulness of the
+        Service. We disclaim all liability for any damages arising from use of the Service.
+      </p>
+
+      <h2>7. Modification and Termination of the Service</h2>
+      <p>We may modify or discontinue the Service at any time without prior notice.</p>
+
+      <h2>8. Changes to These Terms</h2>
+      <p>
+        If we change these Terms, we will notify you on this page. For material changes, we will also provide notice
+        within the application.
+      </p>
+
+      <h2>9. Governing Law and Jurisdiction</h2>
+      <p>
+        These Terms are governed by the laws of Japan. Any dispute arising out of these Terms shall be subject to the
+        exclusive jurisdiction of the Tokyo District Court as the court of first instance.
+      </p>
+
+      <h2>10. Contact</h2>
+      <p><a href="mailto:support@gaze.dev" style="color: var(--accent)">support@gaze.dev</a></p>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-logo">
+          <svg width="24" height="24" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="footer-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0" stop-color="#06b6d4" />
+                <stop offset="1" stop-color="#2563eb" />
+              </linearGradient>
+            </defs>
+            <rect fill="url(#footer-logo-grad)" height="480" rx="96" width="480" x="16" y="16" />
+            <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="26">
+              <path d="m108 200v-80h80" />
+              <path d="m324 120h80v80" />
+              <path d="m108 312v80h80" />
+              <path d="m324 392h80v-80" />
+            </g>
+            <path d="m256 186c0 50 0 50-52 70 52 20 52 20 52 70 14-50 14-50 60-70-46-20-46-20-60-70z" fill="#fff" />
+            <path
+              d="m310 192c0 20 0 20-20 26 20 6 20 6 20 26 6-20 6-20 26-26-20-6-20-6-26-26z"
+              fill="#fff"
+              opacity=".7"
+            />
+          </svg>
+          Gaze
+        </div>
+        <ul class="footer-links">
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms of Service</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="roadmap.html">Roadmap</a></li>
+        </ul>
+        <span class="footer-copy">&copy; 2026 Gaze. All rights reserved.</span>
+      </div>
+    </footer>
+  </body>
+</html>

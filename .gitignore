@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Rust
+target/
+
+# Build output
+dist/
+src-tauri/target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.signing
+
+# Secrets (local-only, never commit)
+gapikey.txt
+*.apikey
+*.secret
+secrets/
+
+# Test coverage
+coverage/
+
+# Tauri
+src-tauri/gen/
+
+# Cloudflare Wrangler (local dev cache)
+.wrangler/

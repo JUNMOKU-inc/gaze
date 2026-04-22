@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.popup {
+    width: 260px;
+    border-radius: 12px;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.08);
+    overflow: hidden;
+    animation: slide-in 250ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: bottom right;
+    transition: opacity 150ms ease-out;
+}
+@keyframes slide-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.thumb-area {
+    position: relative;
+    cursor: pointer;
+    height: 90px;
+    overflow: hidden;
+}
+.thumb-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.hover-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    opacity: 0;
+    transition: opacity 200ms;
+    pointer-events: none;
+}
+.thumb-area:hover .hover-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+.action-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+.action-icon .circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.8);
+    transition: all 150ms;
+}
+.action-icon:hover .circle {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    transform: scale(1.1);
+}
+.action-icon .label {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.6);
+}
+.action-icon:hover .label {
+    color: rgba(255,255,255,0.9);
+}
+.close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.6);
+    transition: all 150ms;
+}
+.close-btn:hover {
+    background: rgba(0,0,0,0.7);
+    color: white;
+}
+.info {
+    padding: 10px 12px;
+}
+.toast {
+    height: 18px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #34d399;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: opacity 500ms;
+}
+.meta {
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    line-height: 1.4;
+}
+.meta .sep { margin: 0 6px; }
+</style>
+</head>
+<body>
+<div class="popup" id="popup">
+    <button class="close-btn" id="close-btn" title="Dismiss (Esc)">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M1 1l8 8M9 1l-8 8"/>
+        </svg>
+    </button>
+
+    <div class="thumb-area" id="thumb-area">
+        <img id="preview-img" src="" alt="Preview"/>
+        <div class="hover-overlay">
+            <button class="action-icon" id="btn-copy">
+                <div class="circle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </div>
+                <span class="label">Copy</span>
+            </button>
+            <button class="action-icon" id="btn-save">
+                <div class="circle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                </div>
+                <span class="label">Save</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="info">
+        <div class="toast" id="toast">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="2 6 5 9 10 3"/>
+            </svg>
+            <span id="toast-text">Copied to clipboard</span>
+        </div>
+        <div class="meta" id="meta"></div>
+    </div>
+</div>
+
+<script>
+// Wait for data injected by Tauri initialization_script
+function boot(attempt) {
+    if (!window.__GAZE_DATA__ || !window.__TAURI__ || !window.__TAURI__.core) {
+        if (attempt < 200) {
+            setTimeout(function() { boot(attempt + 1); }, 16);
+        }
+        return;
+    }
+
+    var data = window.__GAZE_DATA__;
+    var LABEL = window.__GAZE_LABEL__;
+    var invoke = window.__TAURI__.core.invoke;
+    var isGif = data.mediaType === 'gif';
+
+    // Hydrate the page with capture data
+    if (isGif) {
+        document.getElementById('preview-img').src = 'data:image/gif;base64,' + data.gifBase64;
+    } else {
+        var mime = data.imageBase64.indexOf('UklGR') === 0 ? 'image/webp' : 'image/png';
+        document.getElementById('preview-img').src = 'data:' + mime + ';base64,' + data.imageBase64;
+    }
+
+    // Format helpers
+    function fmtSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        var kb = bytes / 1024;
+        if (kb < 1024) return Math.round(kb) + ' KB';
+        return (kb / 1024).toFixed(1) + ' MB';
+    }
+    function fmtTokens(t) {
+        if (t < 1000) return '~' + t + ' tok';
+        return '~' + (t / 1000).toFixed(1) + 'k tok';
+    }
+    function fmtDuration(secs) {
+        var s = Math.round(secs);
+        if (s < 60) return s + 's';
+        return Math.floor(s/60) + 'm ' + (s%60) + 's';
+    }
+
+    var sep = '<span class="sep">\u00b7</span>';
+    if (isGif) {
+        document.getElementById('meta').innerHTML =
+            data.optimizedWidth + '\u00d7' + data.optimizedHeight + sep +
+            fmtSize(data.fileSize) + sep +
+            data.frameCount + ' frames' + sep +
+            fmtDuration(data.durationSecs);
+    } else {
+        document.getElementById('meta').innerHTML =
+            data.optimizedWidth + '\u00d7' + data.optimizedHeight + sep +
+            fmtSize(data.fileSize) + sep +
+            fmtTokens(data.tokenEstimate) + sep +
+            data.provider;
+    }
+
+    // Set initial toast text based on media type
+    if (isGif) {
+        document.getElementById('toast-text').textContent = 'GIF copied';
+    }
+
+    // State
+    var COLLAPSED_WIDTH = 260;
+    var COLLAPSED_HEIGHT = 190;
+    var THUMB_HEIGHT = 90;
+    var INFO_HEIGHT = 60;
+    var isExpanded = false;
+    var isAnimating = false;
+
+    function showToast(msg) {
+        var el = document.getElementById('toast-text');
+        var container = document.getElementById('toast');
+        el.textContent = msg;
+        container.style.opacity = '1';
+        setTimeout(function() { container.style.opacity = '0.5'; }, 2000);
+    }
+
+    function dismissPreview() {
+        document.getElementById('popup').style.opacity = '0';
+        setTimeout(function() {
+            invoke('close_preview_by_label', { label: LABEL });
+        }, 200);
+    }
+
+    function copyCapture() {
+        var b64 = isGif ? data.gifBase64 : data.imageBase64;
+        invoke('copy_image_from_base64', { imageBase64: b64 })
+            .then(function() { showToast(isGif ? 'GIF copied' : 'Copied to clipboard'); })
+            .catch(function(e) { showToast('Error: ' + e); });
+    }
+
+    function saveCapture() {
+        if (isGif) {
+            invoke('save_gif_to_desktop', { gifBase64: data.gifBase64 })
+                .then(function(name) { showToast('Saved ' + name); })
+                .catch(function(e) { showToast('Error: ' + e); });
+        } else {
+            invoke('save_capture_to_desktop', { imageBase64: data.imageBase64 })
+                .then(function(name) { showToast('Saved ' + name); })
+                .catch(function(e) { showToast('Error: ' + e); });
+        }
+    }
+
+    function expandPreview() {
+        isAnimating = true;
+        invoke('get_screen_size', { label: LABEL })
+            .then(function(screenSize) {
+                var screenW = screenSize[0], screenH = screenSize[1];
+                var maxW = screenW * 0.8;
+                var maxH = screenH * 0.8 - INFO_HEIGHT;
+                var imgW = data.optimizedWidth || data.originalWidth;
+                var imgH = data.optimizedHeight || data.originalHeight;
+                var scale = Math.min(maxW / imgW, maxH / imgH, 1);
+                var dispW = Math.max(400, Math.round(imgW * scale));
+                var dispH = Math.round(imgH * scale);
+                var winW = Math.max(dispW, 400);
+                var winH = dispH + INFO_HEIGHT;
+                var x = Math.round((screenW - winW) / 2);
+                var y = Math.round((screenH - winH) / 2);
+
+                var popup = document.getElementById('popup');
+                popup.style.opacity = '0';
+
+                setTimeout(function() {
+                    invoke('resize_preview_window', {
+                        label: LABEL, width: winW, height: winH, x: x, y: y
+                    }).then(function() {
+                        popup.style.width = winW + 'px';
+                        document.getElementById('thumb-area').style.height = dispH + 'px';
+                        document.getElementById('preview-img').style.objectFit = 'contain';
+                        document.getElementById('preview-img').style.background = 'rgba(0,0,0,0.3)';
+                        setTimeout(function() {
+                            popup.style.opacity = '1';
+                            isExpanded = true;
+                            isAnimating = false;
+                        }, 50);
+                    }).catch(function() {
+                        popup.style.opacity = '1';
+                        isAnimating = false;
+                    });
+                }, 160);
+            })
+            .catch(function(e) {
+                showToast('ERR: ' + e);
+                isAnimating = false;
+            });
+    }
+
+    function collapsePreview() {
+        isAnimating = true;
+        var popup = document.getElementById('popup');
+        popup.style.opacity = '0';
+
+        setTimeout(function() {
+            popup.style.width = COLLAPSED_WIDTH + 'px';
+            document.getElementById('thumb-area').style.height = THUMB_HEIGHT + 'px';
+            document.getElementById('preview-img').style.objectFit = 'cover';
+            document.getElementById('preview-img').style.background = 'none';
+
+            invoke('reposition_preview', { label: LABEL })
+                .catch(function() {})
+                .then(function() {
+                    setTimeout(function() {
+                        popup.style.opacity = '1';
+                        isExpanded = false;
+                        isAnimating = false;
+                    }, 50);
+                });
+        }, 160);
+    }
+
+    // Wire up event listeners
+    document.getElementById('close-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        dismissPreview();
+    });
+
+    document.getElementById('thumb-area').addEventListener('click', function() {
+        if (isAnimating) return;
+        if (isExpanded) { collapsePreview(); } else { expandPreview(); }
+    });
+
+    document.getElementById('btn-copy').addEventListener('click', function(e) {
+        e.stopPropagation();
+        copyCapture();
+    });
+
+    document.getElementById('btn-save').addEventListener('click', function(e) {
+        e.stopPropagation();
+        saveCapture();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (isExpanded) { collapsePreview(); } else { dismissPreview(); }
+        }
+        if (e.key === 'c' || e.key === 'C') copyCapture();
+        if (e.key === 's' || e.key === 'S') saveCapture();
+    });
+
+    setTimeout(function() {
+        document.getElementById('toast').style.opacity = '0.5';
+    }, 2000);
+}
+
+boot(0);
+</script>
+</body>
+</html>

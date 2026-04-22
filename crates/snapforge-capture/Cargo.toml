@@ -1,0 +1,13 @@
+[package]
+name = "snapforge-capture"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tracing.workspace = true
+image.workspace = true
+anyhow.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+screencapturekit = { version = "1.5", features = ["macos_14_0"] }

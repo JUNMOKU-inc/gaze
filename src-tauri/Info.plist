@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Gaze captures your screen to send screenshots to LLMs.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Gaze uses Apple Events to manage login items and copy captures to the clipboard.</string>
+</dict>
+</plist>

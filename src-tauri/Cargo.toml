@@ -1,0 +1,42 @@
+[package]
+name = "snapforge-desktop"
+version.workspace = true
+edition.workspace = true
+description = "Gaze - LLM-optimized screen capture tool"
+
+[lib]
+name = "snapforge_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { workspace = true, features = ["tray-icon", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-global-shortcut = "2"
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+directories = "5"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+objc2-app-kit = { version = "0.2", features = ["NSWindow", "NSColor", "NSResponder"] }
+objc2-foundation = "0.2"
+arboard.workspace = true
+image.workspace = true
+base64.workspace = true
+chrono.workspace = true
+gifski = "1"
+imgref = "1"
+rgb = "0.8"
+
+# Workspace crates
+snapforge-capture = { path = "../crates/snapforge-capture" }
+snapforge-core = { path = "../crates/snapforge-core" }
+snapforge-pipeline = { path = "../crates/snapforge-pipeline" }

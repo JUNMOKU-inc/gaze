@@ -1,0 +1,28 @@
+[package]
+name = "gaze-cli"
+version.workspace = true
+edition.workspace = true
+description = "Gaze CLI - LLM-optimized screen capture"
+
+[lib]
+name = "gaze_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gaze"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+snapforge-core = { path = "../snapforge-core" }
+snapforge-pipeline = { path = "../snapforge-pipeline" }
+tracing.workspace = true
+snapforge-capture = { path = "../snapforge-capture" }
+arboard.workspace = true
+
+[dev-dependencies]
+image.workspace = true
+tempfile = "3"

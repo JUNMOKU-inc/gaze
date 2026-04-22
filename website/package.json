@@ -1,0 +1,20 @@
+{
+  "name": "gaze-website",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Gaze landing page",
+  "scripts": {
+    "format": "prettier --write \"**/*.{html,md,css,js,json}\"",
+    "format:check": "prettier --check \"**/*.{html,md,css,js,json}\"",
+    "lint": "htmlhint \"**/*.html\"",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "check": "npm run format:check && npm run lint && npm run i18n:check",
+    "deploy": "wrangler pages deploy . --project-name=gaze --branch=main --commit-dirty=true",
+    "deploy:preview": "wrangler pages deploy . --project-name=gaze --branch=preview --commit-dirty=true"
+  },
+  "devDependencies": {
+    "htmlhint": "^1.1.4",
+    "prettier": "^3.3.3",
+    "wrangler": "^4.84.0"
+  }
+}

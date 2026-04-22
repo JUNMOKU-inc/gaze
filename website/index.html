@@ -1,0 +1,2216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gaze — Show your screen to AI</title>
+    <meta
+      name="description"
+      content="Screen capture built for AI agents. CLI and GUI with OCR, sensitive-data masking, and burst mode."
+    />
+
+    <!-- OGP -->
+    <meta property="og:title" content="Gaze — Show your screen to AI" />
+    <meta
+      property="og:description"
+      content="Screen capture built for AI agents. CLI and GUI with OCR, sensitive-data masking, and burst mode."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://gaze.dev/" />
+    <link rel="canonical" href="https://gaze.dev/" />
+    <link rel="alternate" hreflang="en" href="https://gaze.dev/" />
+    <link rel="alternate" hreflang="ja" href="https://gaze.dev/ja/" />
+    <link rel="alternate" hreflang="x-default" href="https://gaze.dev/" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ========== Reset & Base ========== */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-card: #ffffff;
+        --bg-card-hover: #f1f5f9;
+        --text: #0f172a;
+        --text-secondary: #475569;
+        --text-tertiary: #64748b; /* was #94a3b8 — WCAG AA 4.74:1 */
+        --accent: #2563eb;
+        --accent-light: #3b82f6;
+        --accent-cyan: #06b6d4;
+        --accent-glow: rgba(37, 99, 235, 0.1);
+        --green: #10b981;
+        --red: #ef4444;
+        --border: #e2e8f0;
+        --border-light: #cbd5e1;
+        --radius: 16px;
+        --radius-sm: 10px;
+        --radius-xs: 6px;
+        --max-width: 1200px;
+        --nav-height: 64px;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+        overflow-wrap: anywhere;
+      }
+
+      code,
+      pre,
+      .mono {
+        font-family: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent-light);
+        outline-offset: 2px;
+      }
+
+      .container {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 32px;
+      }
+
+      /* ========== Animations ========== */
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes glow-pulse {
+        0%,
+        100% {
+          opacity: 0.4;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
+      }
+
+      .animate-on-scroll {
+        opacity: 0;
+        transform: translateY(30px);
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease;
+      }
+
+      .animate-on-scroll.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Stagger delays */
+      .delay-1 {
+        transition-delay: 0.1s;
+      }
+      .delay-2 {
+        transition-delay: 0.2s;
+      }
+      .delay-3 {
+        transition-delay: 0.3s;
+      }
+      .delay-4 {
+        transition-delay: 0.4s;
+      }
+
+      /* ========== Nav ========== */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--nav-height);
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border-bottom: 1px solid var(--border);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+      }
+
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 32px;
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 1.125rem;
+        letter-spacing: -0.02em;
+        color: var(--text);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        list-style: none;
+      }
+
+      .nav-links a {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover {
+        color: var(--text);
+      }
+
+      .nav-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s,
+          background 0.15s;
+      }
+
+      .nav-cta:hover {
+        transform: scale(1.03);
+        background: var(--accent-light);
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      }
+
+      /* ========== Hero ========== */
+      .hero {
+        padding-top: calc(var(--nav-height) + 80px);
+        padding-bottom: 80px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        top: -200px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 600px;
+        background: radial-gradient(ellipse, rgba(37, 99, 235, 0.06) 0%, rgba(6, 182, 212, 0.04) 30%, transparent 70%);
+        pointer-events: none;
+        animation: glow-pulse 4s ease-in-out infinite;
+      }
+
+      .hero-logo {
+        margin-bottom: 32px;
+        animation: fade-up 0.6s ease both;
+        display: inline-block;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 100px;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        animation: fade-up 0.6s ease 0.05s both;
+      }
+
+      .hero-badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      .hero h1 {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        max-width: 800px;
+        margin: 0 auto 24px;
+        animation: fade-up 0.6s ease 0.1s both;
+      }
+
+      .hero h1 .gradient-text {
+        background: linear-gradient(135deg, var(--accent-cyan), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .hero-sub {
+        font-size: clamp(1rem, 2vw, 1.125rem);
+        color: var(--text-secondary);
+        max-width: 560px;
+        margin: 0 auto 32px;
+        line-height: 1.8;
+        animation: fade-up 0.6s ease 0.2s both;
+      }
+
+      .hero-ctas {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+        animation: fade-up 0.6s ease 0.3s both;
+      }
+
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 16px 32px;
+        background: var(--accent);
+        color: #fff;
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        font-weight: 600;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s,
+          background 0.15s;
+        border: none;
+        cursor: pointer;
+      }
+
+      .btn-primary:hover {
+        transform: scale(1.03);
+        background: var(--accent-light);
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      }
+
+      .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 16px 32px;
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        font-weight: 500;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+        cursor: pointer;
+      }
+
+      .btn-ghost:hover {
+        background: var(--bg-secondary);
+        border-color: var(--accent);
+      }
+
+      .hero-brew {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xs);
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        margin-bottom: 40px;
+        animation: fade-up 0.6s ease 0.35s both;
+        cursor: pointer;
+        transition: border-color 0.2s;
+        font-family: inherit;
+        min-height: 44px;
+      }
+
+      .hero-brew:hover {
+        border-color: var(--border-light);
+      }
+      .hero-brew code {
+        color: var(--green);
+      }
+
+      /* Hero product mock */
+      .hero-mock {
+        max-width: 960px;
+        margin: 0 auto;
+        position: relative;
+        animation: fade-up 0.8s ease 0.4s both;
+      }
+
+      .hero-mock-window {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          0 20px 60px rgba(0, 0, 0, 0.1),
+          0 0 80px rgba(37, 99, 235, 0.08);
+      }
+
+      .mock-titlebar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .mock-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .mock-dot-red {
+        background: #ff5f57;
+      }
+      .mock-dot-yellow {
+        background: #febc2e;
+      }
+      .mock-dot-green {
+        background: #28c840;
+      }
+
+      .mock-content {
+        padding: 40px;
+        min-height: 360px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        background:
+          radial-gradient(circle at 30% 40%, rgba(37, 99, 235, 0.03) 0%, transparent 50%),
+          radial-gradient(circle at 70% 60%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
+      }
+
+      /* Workflow animation */
+      .workflow {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .workflow-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 24px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        min-width: 160px;
+        transition:
+          border-color 0.3s,
+          background 0.3s;
+      }
+
+      .workflow-step.active {
+        border-color: var(--accent);
+        background: rgba(37, 99, 235, 0.04);
+      }
+
+      .workflow-step-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+      }
+
+      .workflow-step-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .workflow-step-desc {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-align: center;
+      }
+
+      .workflow-arrow {
+        color: var(--text-tertiary);
+        font-size: 1.5rem;
+      }
+
+      .workflow-kbd {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      /* ========== Value Props ========== */
+      .value-props {
+        padding: 80px 0;
+        background: var(--bg-secondary);
+      }
+
+      .props-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+
+      .prop-item {
+        padding: 32px 24px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius);
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition:
+          box-shadow 0.3s,
+          border-color 0.3s;
+      }
+
+      .prop-item:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        border-color: var(--border-light);
+      }
+
+      .prop-keyword {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        margin-bottom: 12px;
+      }
+
+      .prop-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .prop-desc {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+      }
+
+      /* ========== Features Bento ========== */
+      .features {
+        padding: 80px 0;
+        background: var(--bg);
+      }
+
+      .section-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        font-size: clamp(1.75rem, 4vw, 2.75rem);
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        margin-bottom: 16px;
+      }
+
+      .section-desc {
+        font-size: 1.0625rem;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin-bottom: 48px;
+      }
+
+      .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: minmax(200px, auto);
+        grid-auto-flow: dense;
+        gap: 16px;
+      }
+
+      .bento-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 32px;
+        transition:
+          border-color 0.3s,
+          box-shadow 0.3s;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+
+      .bento-card:hover {
+        border-color: var(--border-light);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      }
+
+      .bento-card.large {
+        grid-column: span 2;
+        grid-row: span 2;
+      }
+
+      .bento-card.wide {
+        grid-column: span 2;
+      }
+
+      .bento-card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        font-size: 1.25rem;
+      }
+
+      .bento-card-icon.green {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: rgba(16, 185, 129, 0.15);
+      }
+      .bento-card-icon.blue {
+        background: rgba(6, 182, 212, 0.08);
+        border-color: rgba(6, 182, 212, 0.15);
+      }
+      .bento-card-icon.pink {
+        background: rgba(236, 72, 153, 0.08);
+        border-color: rgba(236, 72, 153, 0.15);
+      }
+
+      .bento-card h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .bento-card p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        flex: 1;
+      }
+
+      .bento-visual {
+        margin-top: 24px;
+        padding: 20px;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+      }
+
+      /* Provider logos in bento */
+      .provider-row {
+        display: flex;
+        gap: 16px;
+        margin-top: 24px;
+        flex-wrap: wrap;
+      }
+
+      .provider-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+      }
+
+      .provider-chip .mono {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+
+      /* Token savings visual */
+      .token-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .token-bar-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        width: 80px;
+        text-align: right;
+      }
+
+      .token-bar-track {
+        flex: 1;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .token-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1s ease;
+      }
+
+      .token-bar-value {
+        font-size: 0.75rem;
+        font-weight: 600;
+        width: 60px;
+      }
+
+      /* ========== MCP Section ========== */
+      .mcp-section {
+        padding: 80px 0;
+        background: var(--bg-secondary);
+      }
+
+      .mcp-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        align-items: center;
+      }
+
+      .terminal-mock {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      .terminal-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid #334155;
+      }
+
+      .terminal-body {
+        padding: 24px;
+        font-size: 0.8125rem;
+        line-height: 1.8;
+        color: #e2e8f0;
+      }
+
+      .terminal-body .comment {
+        color: #8b9cb5;
+      } /* was #64748b — 4.5:1+ against #1e293b bg */
+      .terminal-body .keyword {
+        color: #a78bfa;
+      }
+      .terminal-body .string {
+        color: #34d399;
+      }
+      .terminal-body .func {
+        color: #60a5fa;
+      }
+      .terminal-body .prompt {
+        color: #f472b6;
+      }
+
+      /* ========== Security ========== */
+      .security-section {
+        padding: 80px 0;
+        background: var(--bg);
+      }
+
+      .security-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .security-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 32px;
+        transition:
+          border-color 0.3s,
+          box-shadow 0.3s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+
+      .security-card:hover {
+        border-color: var(--border-light);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      }
+
+      .security-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .security-icon.shield {
+        background: rgba(37, 99, 235, 0.08);
+      }
+
+      .security-icon.check {
+        background: rgba(16, 185, 129, 0.08);
+      }
+
+      .security-icon.globe {
+        background: rgba(6, 182, 212, 0.08);
+      }
+
+      .security-card h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .security-card p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+      }
+
+      /* ========== Pricing ========== */
+      .pricing {
+        padding: 80px 0;
+        background: var(--bg-secondary);
+      }
+
+      .pricing-header {
+        text-align: center;
+        margin-bottom: 48px;
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .pricing-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+
+      .pricing-card.featured {
+        border: 2px solid var(--accent);
+        border-top-width: 4px;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+        position: relative;
+      }
+
+      .pricing-card.featured::before {
+        content: attr(data-badge);
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 4px 14px;
+        background: var(--accent);
+        color: white;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        border-radius: 100px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .pricing-tier {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      .pricing-amount {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        margin-bottom: 4px;
+      }
+
+      .pricing-amount .currency {
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      .pricing-amount .price {
+        font-size: 3rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .pricing-amount .period {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+      }
+
+      .pricing-note {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        min-height: 2.5em;
+      }
+
+      .pricing-features {
+        list-style: none;
+        margin-bottom: 32px;
+        flex: 1;
+      }
+
+      .pricing-features li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 8px 0;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+      }
+
+      .pricing-features li::before {
+        content: "";
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        margin-top: 2px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: contain;
+      }
+
+      .pricing-btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        text-align: center;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s,
+          background 0.15s;
+        border: none;
+        cursor: pointer;
+      }
+
+      .pricing-btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .pricing-btn-primary:hover {
+        background: var(--accent-light);
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      }
+
+      .pricing-btn-ghost {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border-light);
+      }
+
+      .pricing-btn-ghost:hover {
+        border-color: var(--accent);
+      }
+
+      .pricing-btn:hover {
+        transform: scale(1.02);
+      }
+
+      .pricing-note-bottom {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+      }
+
+      /* ========== B2B Section ========== */
+      .b2b-section {
+        padding: 80px 0;
+        background: var(--bg-secondary);
+      }
+
+      .b2b-cards {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .b2b-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+
+      .b2b-card h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .b2b-card .price {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+
+      .b2b-card .price span {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .b2b-card p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+      }
+
+      .b2b-features {
+        list-style: none;
+        columns: 2;
+        gap: 0 24px;
+      }
+
+      .b2b-features li {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        padding: 4px 0;
+      }
+
+      .b2b-features li::before {
+        content: "";
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        margin-right: 6px;
+        vertical-align: -2px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: contain;
+      }
+
+      /* ========== FAQ ========== */
+      .faq {
+        padding: 80px 0;
+        background: var(--bg);
+      }
+
+      .faq-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .faq-item h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .faq-item p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+      }
+
+      /* ========== Final CTA ========== */
+      .final-cta {
+        padding: 96px 0;
+        text-align: center;
+        position: relative;
+        background: linear-gradient(135deg, var(--accent-cyan), var(--accent));
+        color: #fff;
+      }
+
+      .final-cta h2 {
+        font-size: clamp(1.75rem, 4vw, 2.75rem);
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        margin-bottom: 16px;
+        color: #fff;
+      }
+
+      .final-cta p {
+        font-size: 1.0625rem;
+        color: rgba(255, 255, 255, 0.95); /* was 0.85 */
+        margin-bottom: 32px;
+      }
+
+      .final-cta .btn-primary {
+        background: #fff;
+        color: var(--accent);
+      }
+
+      .final-cta .btn-primary:hover {
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      }
+
+      .final-cta .btn-ghost {
+        background: transparent;
+        border-color: rgba(255, 255, 255, 0.4);
+        color: #fff;
+      }
+
+      .final-cta .btn-ghost:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.6);
+      }
+
+      /* ========== Footer ========== */
+      footer {
+        background: var(--bg-secondary);
+        padding: 48px 0;
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 48px;
+      }
+
+      .footer-brand p {
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+        margin-top: 12px;
+        max-width: 280px;
+      }
+
+      .footer-col h4 {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+      }
+
+      .footer-col ul {
+        list-style: none;
+      }
+
+      .footer-col li {
+        margin-bottom: 8px;
+      }
+
+      .footer-col a {
+        font-size: 0.875rem;
+        color: var(--text-tertiary);
+        transition: color 0.2s;
+      }
+
+      .footer-col a:hover {
+        color: var(--text);
+      }
+
+      .footer-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+      }
+
+      /* ========== Mobile CTA ========== */
+      .nav-cta-mobile {
+        display: none;
+      }
+      .nav-cta-mobile a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 20px;
+        background: var(--accent);
+        color: #fff;
+        border-radius: var(--radius-xs);
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      /* ========== Hamburger ========== */
+      .nav-hamburger {
+        display: none;
+        background: none;
+        border: none;
+        color: var(--text);
+        cursor: pointer;
+        padding: 10px;
+        min-width: 44px;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ========== Responsive ========== */
+      @media (max-width: 1024px) {
+        .bento-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .bento-card.large {
+          grid-column: span 2;
+          grid-row: span 1;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .mcp-grid {
+          grid-template-columns: 1fr;
+        }
+        .pricing-grid {
+          grid-template-columns: 1fr;
+          max-width: 480px;
+          margin: 0 auto;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .nav-hamburger {
+          display: flex;
+        }
+        .terminal-body {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .nav-links {
+          display: none;
+          position: absolute;
+          top: var(--nav-height);
+          left: 0;
+          right: 0;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-bottom: 1px solid var(--border);
+          padding: 16px 24px;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .nav-links.open {
+          display: flex;
+        }
+        .nav-cta {
+          display: none;
+        }
+        .nav-cta-mobile {
+          display: block;
+        }
+        .props-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .bento-grid {
+          grid-template-columns: 1fr;
+        }
+        .bento-card.large,
+        .bento-card.wide {
+          grid-column: span 1;
+        }
+        .mcp-grid {
+          grid-template-columns: 1fr;
+        }
+        .pricing-grid {
+          grid-template-columns: 1fr;
+        }
+        .b2b-cards {
+          grid-template-columns: 1fr;
+        }
+        .faq-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+        }
+        .workflow-arrow {
+          display: none;
+        }
+        .workflow {
+          gap: 12px;
+        }
+        .security-grid {
+          grid-template-columns: 1fr;
+        }
+        .nav-links a {
+          display: block;
+          padding: 12px 0;
+          font-size: 1rem;
+        }
+        .pricing-btn {
+          padding: 14px;
+        }
+        .footer-col a {
+          display: inline-block;
+          padding: 6px 0;
+        }
+        .footer-col li {
+          margin-bottom: 4px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .prop-item {
+          padding: 24px 16px;
+        }
+        .b2b-features {
+          columns: 1;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .props-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr;
+        }
+        .hero-ctas {
+          flex-direction: column;
+        }
+        .container {
+          padding: 0 16px;
+        }
+        .hero {
+          padding-top: calc(var(--nav-height) + 48px);
+          padding-bottom: 48px;
+        }
+        .value-props,
+        .features,
+        .mcp-section,
+        .security-section,
+        .pricing,
+        .faq {
+          padding: 48px 0;
+        }
+        .final-cta {
+          padding: 64px 0;
+        }
+        .terminal-body {
+          font-size: 0.6875rem;
+        }
+        .hero-ctas .btn-primary,
+        .hero-ctas .btn-ghost {
+          width: 100%;
+          justify-content: center;
+        }
+        .hero-brew {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+
+      /* ========== Japanese word-break ========== */
+      h1,
+      h2,
+      h3 {
+        word-break: auto-phrase;
+        overflow-wrap: anywhere;
+      }
+
+      @supports not (word-break: auto-phrase) {
+        h1,
+        h2,
+        h3 {
+          word-break: keep-all;
+        }
+      }
+
+      /* ========== Touch device hover disable ========== */
+      @media (hover: none) {
+        .prop-item:hover {
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          border-color: var(--border-light);
+        }
+        .bento-card:hover {
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          border-color: var(--border);
+        }
+        .security-card:hover {
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          border-color: var(--border);
+        }
+        .pricing-btn:hover {
+          transform: none;
+        }
+        .btn-primary:hover {
+          transform: none;
+          box-shadow: none;
+        }
+        .nav-cta:hover {
+          transform: none;
+          box-shadow: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+        .animate-on-scroll {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .nav-lang {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+        margin-right: 12px;
+      }
+      .nav-lang a,
+      .nav-lang [aria-current="true"] {
+        padding: 4px 8px;
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+      .nav-lang a {
+        transition: color 0.15s;
+      }
+      .nav-lang a:hover {
+        color: var(--text);
+      }
+      .nav-lang [aria-current="true"] {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .nav-lang .lang-sep {
+        color: var(--border-light);
+        padding: 0 2px;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ========== Nav ========== -->
+    <nav aria-label="Main navigation">
+      <div class="nav-inner">
+        <a href="#" class="nav-logo">
+          <svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="nav-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0" stop-color="#06b6d4" />
+                <stop offset="1" stop-color="#2563eb" />
+              </linearGradient>
+            </defs>
+            <rect fill="url(#nav-logo-grad)" height="480" rx="96" width="480" x="16" y="16" />
+            <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="26">
+              <path d="m108 200v-80h80" />
+              <path d="m324 120h80v80" />
+              <path d="m108 312v80h80" />
+              <path d="m324 392h80v-80" />
+            </g>
+            <path d="m256 186c0 50 0 50-52 70 52 20 52 20 52 70 14-50 14-50 60-70-46-20-46-20-60-70z" fill="#fff" />
+            <path
+              d="m310 192c0 20 0 20-20 26 20 6 20 6 20 26 6-20 6-20 26-26-20-6-20-6-26-26z"
+              fill="#fff"
+              opacity=".7"
+            />
+          </svg>
+          Gaze
+        </a>
+        <ul class="nav-links" id="nav-menu">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li class="nav-cta-mobile"><a href="#pricing">Download</a></li>
+        </ul>
+        <div class="nav-lang" aria-label="Language">
+          <span aria-current="true">EN</span>
+          <span class="lang-sep">/</span>
+          <a href="ja/" hreflang="ja" rel="alternate">JA</a>
+        </div>
+
+        <button
+          class="nav-hamburger"
+          type="button"
+          aria-label="Open menu"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <a href="#pricing" class="nav-cta">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Download
+        </a>
+      </div>
+    </nav>
+
+    <!-- ========== Hero ========== -->
+    <section class="hero">
+      <div class="container">
+        <!-- Hero Logo -->
+        <div class="hero-logo">
+          <svg width="64" height="64" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="hero-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0" stop-color="#06b6d4" />
+                <stop offset="1" stop-color="#2563eb" />
+              </linearGradient>
+            </defs>
+            <rect fill="url(#hero-logo-grad)" height="480" rx="96" width="480" x="16" y="16" />
+            <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="26">
+              <path d="m108 200v-80h80" />
+              <path d="m324 120h80v80" />
+              <path d="m108 312v80h80" />
+              <path d="m324 392h80v-80" />
+            </g>
+            <path d="m256 186c0 50 0 50-52 70 52 20 52 20 52 70 14-50 14-50 60-70-46-20-46-20-60-70z" fill="#fff" />
+            <path
+              d="m310 192c0 20 0 20-20 26 20 6 20 6 20 26 6-20 6-20 26-26-20-6-20-6-26-26z"
+              fill="#fff"
+              opacity=".7"
+            />
+          </svg>
+        </div>
+
+        <h1><span class="gradient-text">Show your screen to AI.</span></h1>
+
+        <p class="hero-sub">
+          AI sees the screen, decides, and acts.<br />
+          Screen capture built for that. One CLI.
+        </p>
+
+        <div class="hero-ctas">
+          <a href="#" class="btn-primary" aria-label="Download">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14m-7-7 7 7 7-7" />
+            </svg>
+            Download
+          </a>
+          <a href="#features" class="btn-ghost">See features</a>
+        </div>
+
+        <button
+          class="hero-brew"
+          type="button"
+          aria-label="Copy brew install command"
+          onclick="navigator.clipboard.writeText('brew install gaze')"
+        >
+          <code>brew install gaze</code>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </button>
+
+        <!-- Product mockup -->
+        <div class="hero-mock">
+          <div class="hero-mock-window">
+            <div class="mock-titlebar">
+              <div class="mock-dot mock-dot-red"></div>
+              <div class="mock-dot mock-dot-yellow"></div>
+              <div class="mock-dot mock-dot-green"></div>
+            </div>
+            <div class="mock-content" style="padding: 0">
+              <div
+                style="background: #1e293b; border-radius: 0 0 var(--radius) var(--radius); padding: 32px; width: 100%"
+              >
+                <div class="terminal-body mono" style="text-align: left">
+                  <div><span class="comment"># Show the whole screen to AI</span></div>
+                  <div><span class="prompt">$</span> gaze capture</div>
+                  <div>&nbsp;</div>
+                  <div><span class="comment"># Zoom into the region that matters</span></div>
+                  <div><span class="prompt">$</span> gaze capture --area 340,120,800,500</div>
+                  <div>&nbsp;</div>
+                  <div><span class="comment"># Send text instead of an image</span></div>
+                  <div><span class="prompt">$</span> gaze ocr --area 340,120,800,500</div>
+                  <div>&nbsp;</div>
+                  <div><span class="comment"># Record a clip of the interaction</span></div>
+                  <div><span class="prompt">$</span> gaze record --duration 10</div>
+                </div>
+                <p style="font-size: 0.8125rem; color: #8b9cb5; margin-top: 16px; text-align: center">
+                  From Claude Code, Cursor, or a shell script.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Value Props ========== -->
+    <section class="value-props animate-on-scroll">
+      <div class="container">
+        <div class="props-grid">
+          <div class="prop-item">
+            <div class="prop-keyword">Screenshot</div>
+            <div class="prop-title">Show as an image</div>
+            <div class="prop-desc">Full screen, a selected area, or a single window.</div>
+          </div>
+          <div class="prop-item">
+            <div class="prop-keyword">OCR</div>
+            <div class="prop-title">Show as text</div>
+            <div class="prop-desc">Convert the screen to text. 1,600 image tokens become 80.</div>
+          </div>
+          <div class="prop-item">
+            <div class="prop-keyword">Record</div>
+            <div class="prop-title">Show as a video</div>
+            <div class="prop-desc">Record a flow. Frames are extracted automatically.</div>
+          </div>
+          <div class="prop-item">
+            <div class="prop-keyword">CLI</div>
+            <div class="prop-title">AI looks directly</div>
+            <div class="prop-desc">From Claude Code or Cursor, AI captures the screen itself.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Features Bento ========== -->
+    <section class="features" id="features">
+      <div class="container">
+        <h2 class="section-title animate-on-scroll">For moments like these.</h2>
+
+        <div class="bento-grid">
+          <!-- Large: Show the UI to AI and have it fixed -->
+          <div class="bento-card large animate-on-scroll">
+            <div class="bento-card-icon green" aria-hidden="true">&#128065;</div>
+            <h3>Show a UI to AI and have it fixed</h3>
+            <p>
+              Capture the full screen, let AI locate the part that matters, zoom in by coordinates, and iterate with
+              higher precision. No more pasting screenshot after screenshot.
+            </p>
+            <div class="bento-visual">
+              <div class="token-bar">
+                <span class="token-bar-label">As image</span>
+                <div class="token-bar-track">
+                  <div class="token-bar-fill" style="width: 100%; background: var(--red)"></div>
+                </div>
+                <span class="token-bar-value" style="color: var(--red)">1,600 tok</span>
+              </div>
+              <div class="token-bar">
+                <span class="token-bar-label">As text</span>
+                <div class="token-bar-track">
+                  <div class="token-bar-fill" style="width: 5%; background: var(--green)"></div>
+                </div>
+                <span class="token-bar-value" style="color: var(--green)">80 tok</span>
+              </div>
+            </div>
+            <div class="provider-row">
+              <div class="provider-chip">Tokens <span class="mono">95% less</span></div>
+              <div class="provider-chip">Processing <span class="mono">fully local</span></div>
+              <div class="provider-chip">Languages <span class="mono">Japanese &middot; English</span></div>
+            </div>
+          </div>
+
+          <!-- Pass an error screen as-is -->
+          <div class="bento-card animate-on-scroll delay-1">
+            <div class="bento-card-icon blue" aria-hidden="true">&#9744;</div>
+            <h3>Pass an error screen as-is</h3>
+            <p>Capture the error screen from the CLI. Run OCR and the stack trace comes through accurately.</p>
+          </div>
+
+          <!-- Capture an interaction flow in one go -->
+          <div class="bento-card animate-on-scroll delay-2">
+            <div class="bento-card-icon" aria-hidden="true">&#9889;</div>
+            <h3>Capture a flow in one go</h3>
+            <p>Burst mode takes 5 or 10 frames from a single command, ready to hand to AI together.</p>
+          </div>
+
+          <!-- Mask sensitive data before showing -->
+          <div class="bento-card wide animate-on-scroll">
+            <div class="bento-card-icon pink" aria-hidden="true">&#128274;</div>
+            <h3>Mask sensitive data before sharing</h3>
+            <p>Auto-detect and mask emails, API keys, and personal data. Internal screens stay safe to hand to AI.</p>
+          </div>
+
+          <!-- Show motion with a recording -->
+          <div class="bento-card animate-on-scroll delay-1">
+            <div class="bento-card-icon blue" aria-hidden="true">&#127909;</div>
+            <h3>Show motion with a recording</h3>
+            <p>Record the screen and extract frames. For conveying animations or transitions.</p>
+          </div>
+
+          <!-- A workflow that runs without hands -->
+          <div class="bento-card animate-on-scroll delay-2">
+            <div class="bento-card-icon" aria-hidden="true">&#9881;</div>
+            <h3>A workflow that runs without hands</h3>
+            <p>Crop the region, run OCR, save it. Layout detection and coordinate targeting are handled by AI.</p>
+          </div>
+
+          <!-- Check the screen on a schedule -->
+          <div class="bento-card animate-on-scroll delay-3">
+            <div class="bento-card-icon pink" aria-hidden="true">&#129302;</div>
+            <h3>Watch the screen on a schedule</h3>
+            <p>
+              gaze watch observes the screen and, on change, pulls the diff via OCR. Good for deploy checks and UI
+              drift.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== MCP Section ========== -->
+    <section class="mcp-section animate-on-scroll">
+      <div class="container">
+        <div class="mcp-grid">
+          <div>
+            <div class="section-label">CLI & Agents</div>
+            <h2 class="section-title">AI sees, decides, and acts.</h2>
+            <p class="section-desc" style="margin-bottom: 24px">
+              Capture the full screen, locate the right region, zoom by coordinates, read it as text, move on.<br />
+              The "see and decide" loop humans used to run — now AI runs it through the CLI.
+            </p>
+          </div>
+          <div class="terminal-mock">
+            <div class="terminal-header">
+              <div class="mock-dot mock-dot-red"></div>
+              <div class="mock-dot mock-dot-yellow"></div>
+              <div class="mock-dot mock-dot-green"></div>
+            </div>
+            <div class="terminal-body mono">
+              <div><span class="comment"># AI checks the full screen</span></div>
+              <div><span class="prompt">$</span> gaze capture</div>
+              <div style="color: #8b9cb5">&rarr; screenshot saved: /tmp/gaze-001.png</div>
+              <div>&nbsp;</div>
+              <div><span class="comment"># Zoom into the region by coordinates</span></div>
+              <div><span class="prompt">$</span> gaze capture --area 340,120,800,500</div>
+              <div style="color: #8b9cb5">&rarr; screenshot saved: /tmp/gaze-002.png</div>
+              <div>&nbsp;</div>
+              <div><span class="comment"># Read it accurately as text</span></div>
+              <div><span class="prompt">$</span> gaze ocr --area 340,120,800,500</div>
+              <div style="color: #8b9cb5">&rarr; "Error: Cannot read property 'id' of undefined</div>
+              <div style="color: #8b9cb5">&nbsp;&nbsp;&nbsp;&nbsp;at UserService.getUser (src/user.ts:42)"</div>
+              <div>&nbsp;</div>
+              <div><span class="comment"># Mask sensitive data, then convert to text</span></div>
+              <div><span class="prompt">$</span> gaze capture | gaze mask | gaze ocr</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Security (B2B) ========== -->
+    <section class="security-section animate-on-scroll">
+      <div class="container">
+        <h2 class="section-title animate-on-scroll">Local processing. Nothing leaves the device.</h2>
+
+        <div class="security-grid">
+          <div class="security-card">
+            <div class="security-icon shield" aria-hidden="true">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2563eb"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </div>
+            <h3>All on-device</h3>
+            <p>Capture, OCR, resize — all local.</p>
+          </div>
+          <div class="security-card">
+            <div class="security-icon check" aria-hidden="true">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#10b981"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+            </div>
+            <h3>Sensitive data removed automatically</h3>
+            <p>Mask emails and API keys before anything goes to an LLM. Admins can block sending outright.</p>
+          </div>
+          <div class="security-card">
+            <div class="security-icon globe" aria-hidden="true">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#06b6d4"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            </div>
+            <h3>Security review stays short</h3>
+            <p>
+              No image data leaves the device, so the DPA scope is narrow. Most checklist items come back "not
+              applicable".
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Pricing ========== -->
+    <section class="pricing" id="pricing">
+      <div class="container">
+        <div class="pricing-header">
+          <div class="section-label animate-on-scroll">Pricing</div>
+          <h2 class="section-title animate-on-scroll">Plans</h2>
+        </div>
+
+        <div class="pricing-grid animate-on-scroll">
+          <!-- Free -->
+          <div class="pricing-card">
+            <div class="pricing-tier">Free</div>
+            <div class="pricing-amount">
+              <span class="currency">$</span>
+              <span class="price">0</span>
+            </div>
+            <div class="pricing-note">50 captures a month. OCR, CLI, and MCP included.</div>
+            <ul class="pricing-features">
+              <li>Area and window capture</li>
+              <li>OCR text extraction</li>
+              <li>Copy to clipboard</li>
+              <li>Global shortcut</li>
+            </ul>
+            <a href="#" class="pricing-btn pricing-btn-ghost">Start for free</a>
+          </div>
+
+          <!-- Pro (Buy Once) -->
+          <div class="pricing-card featured" data-badge="Most popular">
+            <div class="pricing-tier">Pro &mdash; one-time</div>
+            <div class="pricing-amount">
+              <span class="currency">$</span>
+              <span class="price">29</span>
+            </div>
+            <div class="pricing-note">Up to 2 devices. One year of updates. Keep using it afterward.</div>
+            <ul class="pricing-features">
+              <li>Everything in Free</li>
+              <li>Unlimited captures</li>
+              <li>Burst mode</li>
+              <li>Smart masking</li>
+              <li>GIF &amp; video capture</li>
+              <li>Auto-resize for LLMs</li>
+              <li>CLI &amp; MCP server</li>
+              <li>Token usage preview</li>
+            </ul>
+            <a href="#" class="pricing-btn pricing-btn-primary">Buy Gaze Pro</a>
+          </div>
+
+          <!-- Pro (Subscribe) -->
+          <div class="pricing-card">
+            <div class="pricing-tier">Pro &mdash; subscription</div>
+            <div class="pricing-amount">
+              <span class="currency">$</span>
+              <span class="price">39</span>
+              <span class="period">/year</span>
+            </div>
+            <div class="pricing-note">From $4.99/mo. Always on the latest version.</div>
+            <ul class="pricing-features">
+              <li>Everything in Pro</li>
+              <li>Auto-updates to the latest version</li>
+              <li>Cancel anytime</li>
+              <li>From $4.99/mo</li>
+            </ul>
+            <a href="#" class="pricing-btn pricing-btn-ghost">Start subscription</a>
+          </div>
+        </div>
+
+        <p class="pricing-note-bottom animate-on-scroll">
+          One-time license updates after year one: $15/year. Skip renewal and your current version keeps working.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== B2B Section ========== -->
+    <section class="b2b-section" id="teams">
+      <div class="container">
+        <h3 class="section-title animate-on-scroll" style="text-align: center; font-size: 1.75rem; margin-bottom: 8px">
+          Team and Enterprise
+        </h3>
+        <p class="section-desc animate-on-scroll" style="text-align: center; margin: 0 auto 32px">
+          Admins configure masking rules and outbound controls.
+        </p>
+
+        <div class="b2b-cards animate-on-scroll">
+          <div class="b2b-card">
+            <h3>Team</h3>
+            <div class="price">$12 <span>/user/month</span></div>
+            <p>From 3 seats. Annual: $120/user/year.</p>
+            <ul class="b2b-features">
+              <li>Everything in Pro</li>
+              <li>Team admin console</li>
+              <li>Shared configuration</li>
+              <li>Usage analytics</li>
+              <li>Priority support</li>
+              <li>Volume discounts</li>
+            </ul>
+            <a href="#" class="pricing-btn pricing-btn-primary" style="margin-top: 20px">Start Team plan</a>
+          </div>
+          <div class="b2b-card">
+            <h3>Enterprise</h3>
+            <div class="price">Contact us</div>
+            <p>SSO, audit logs, dedicated support. For larger rollouts.</p>
+            <ul class="b2b-features">
+              <li>Everything in Team</li>
+              <li>SSO (SAML/OIDC)</li>
+              <li>SCIM provisioning</li>
+              <li>Audit logs</li>
+              <li>Data retention policy</li>
+              <li>On-prem LLM support</li>
+              <li>Dedicated CSM</li>
+              <li>SLA</li>
+            </ul>
+            <a href="mailto:sales@gaze.dev" class="pricing-btn pricing-btn-ghost" style="margin-top: 20px"
+              >Contact sales</a
+            >
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== FAQ ========== -->
+    <section class="faq" id="faq">
+      <div class="container">
+        <div class="section-label animate-on-scroll">FAQ</div>
+        <h2 class="section-title animate-on-scroll" style="margin-bottom: 48px">Frequently asked</h2>
+
+        <div class="faq-grid">
+          <div class="faq-item animate-on-scroll">
+            <h3>How is this different from the built-in macOS screenshot?</h3>
+            <p>
+              The built-in tool just saves an image. Gaze adds OCR, burst capture, and sensitive-data masking, callable
+              from the CLI in one command.
+            </p>
+          </div>
+          <div class="faq-item animate-on-scroll delay-1">
+            <h3>Where does the data go?</h3>
+            <p>Nowhere. Processing is local. Telemetry is off by default.</p>
+          </div>
+          <div class="faq-item animate-on-scroll">
+            <h3>How accurate is OCR?</h3>
+            <p>It uses the macOS Vision framework. Japanese is supported.</p>
+          </div>
+          <div class="faq-item animate-on-scroll delay-1">
+            <h3>What happens when the one-time update window ends?</h3>
+            <p>Your last version keeps working. Renewals are optional at $15/year.</p>
+          </div>
+          <div class="faq-item animate-on-scroll">
+            <h3>Can I use both CLI and GUI?</h3>
+            <p>Yes. brew install gaze gives you the CLI; launching the app gives you the GUI. Same binary.</p>
+          </div>
+          <div class="faq-item animate-on-scroll delay-1">
+            <h3>Does it work offline?</h3>
+            <p>Yes. OCR, capture, and masking all run locally. No network required.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Final CTA ========== -->
+    <section class="final-cta animate-on-scroll">
+      <div class="container">
+        <h2>Try it.</h2>
+        <p>brew install gaze. 50 captures a month, free.</p>
+        <div class="hero-ctas" style="margin-bottom: 0">
+          <a href="#pricing" class="btn-primary">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14m-7-7 7 7 7-7" />
+            </svg>
+            Download
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Footer ========== -->
+    <footer>
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <div class="nav-logo" style="margin-bottom: 4px">
+              <svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="footer-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0" stop-color="#06b6d4" />
+                    <stop offset="1" stop-color="#2563eb" />
+                  </linearGradient>
+                </defs>
+                <rect fill="url(#footer-logo-grad)" height="480" rx="96" width="480" x="16" y="16" />
+                <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="26">
+                  <path d="m108 200v-80h80" />
+                  <path d="m324 120h80v80" />
+                  <path d="m108 312v80h80" />
+                  <path d="m324 392h80v-80" />
+                </g>
+                <path d="m256 186c0 50 0 50-52 70 52 20 52 20 52 70 14-50 14-50 60-70-46-20-46-20-60-70z" fill="#fff" />
+                <path
+                  d="m310 192c0 20 0 20-20 26 20 6 20 6 20 26 6-20 6-20 26-26-20-6-20-6-26-26z"
+                  fill="#fff"
+                  opacity=".7"
+                />
+              </svg>
+              Gaze
+            </div>
+            <p>AI sees the screen, decides, and acts. A capture tool built for that.</p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="changelog.html">Changelog</a></li>
+              <li><a href="roadmap.html">Roadmap</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">Twitter / X</a></li>
+              <li><a href="privacy.html">Privacy policy</a></li>
+              <li><a href="terms.html">Terms of service</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 Gaze. All rights reserved.</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ========== Scripts ========== -->
+    <script>
+      // Intersection Observer for scroll animations
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: "0px 0px -40px 0px" },
+      );
+
+      document.querySelectorAll(".animate-on-scroll").forEach((el) => observer.observe(el));
+
+      // Copy brew command
+      document.querySelector(".hero-brew")?.addEventListener("click", function () {
+        const original = this.querySelector("code").textContent;
+        this.querySelector("code").textContent = "Copied";
+        setTimeout(() => {
+          this.querySelector("code").textContent = original;
+        }, 1500);
+      });
+
+      // Hamburger toggle with aria-expanded
+      document.querySelector(".nav-hamburger")?.addEventListener("click", function () {
+        const nav = document.querySelector(".nav-links");
+        nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", nav.classList.contains("open"));
+      });
+
+      // Close menu on link tap
+      document.querySelectorAll(".nav-links a").forEach((link) => {
+        link.addEventListener("click", () => {
+          document.querySelector(".nav-links").classList.remove("open");
+          document.querySelector(".nav-hamburger")?.setAttribute("aria-expanded", "false");
+        });
+      });
+
+      // Close on outside tap
+      document.addEventListener("click", (e) => {
+        const nav = document.querySelector(".nav-links");
+        const hamburger = document.querySelector(".nav-hamburger");
+        if (nav && hamburger && !nav.contains(e.target) && !hamburger.contains(e.target)) {
+          nav.classList.remove("open");
+          hamburger.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      // Smooth scroll for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          const href = this.getAttribute("href");
+          if (href === "#" || href.length <= 1) return; // skip empty href
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

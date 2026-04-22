@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #1a1a1a;
+    color: rgba(255,255,255,0.87);
+    overflow-y: auto;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    font-size: 13px;
+    line-height: 1.4;
+}
+body::-webkit-scrollbar { width: 6px; }
+body::-webkit-scrollbar-track { background: transparent; }
+body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+body::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+.container {
+    padding: 20px 24px 28px;
+}
+.section {
+    margin-bottom: 24px;
+}
+.section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 10px;
+    padding-left: 2px;
+}
+.card {
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    min-height: 40px;
+}
+.row + .row {
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.row-label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.87);
+    flex-shrink: 0;
+}
+.row-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    padding: 4px 14px 10px;
+}
+
+/* Select */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    font-family: inherit;
+    padding: 5px 28px 5px 10px;
+    cursor: pointer;
+    outline: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    min-width: 100px;
+}
+select:hover { border-color: rgba(255,255,255,0.2); }
+select:focus { border-color: #2563eb; }
+
+/* Number input */
+input[type="number"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    font-family: inherit;
+    padding: 5px 10px;
+    width: 72px;
+    text-align: right;
+    outline: none;
+}
+input[type="number"]:hover { border-color: rgba(255,255,255,0.2); }
+input[type="number"]:focus { border-color: #2563eb; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Text input (read-only path) */
+input[type="text"] {
+    appearance: none;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    font-family: inherit;
+    padding: 5px 10px;
+    flex: 1;
+    min-width: 0;
+    outline: none;
+}
+
+/* Toggle switch */
+.toggle {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    flex-shrink: 0;
+}
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.toggle .slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.12);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 200ms;
+}
+.toggle .slider::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 200ms;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle input:checked + .slider {
+    background: #2563eb;
+}
+.toggle input:checked + .slider::before {
+    transform: translateX(16px);
+}
+
+/* Unit label */
+.unit {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+}
+
+/* Shortcut display */
+.shortcut-display {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.shortcut-keys {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: inherit;
+}
+.btn-small {
+    font-size: 11px;
+    font-family: inherit;
+    color: #2563eb;
+    background: rgba(37,99,235,0.1);
+    border: 1px solid rgba(37,99,235,0.2);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 150ms;
+}
+.btn-small:hover {
+    background: rgba(37,99,235,0.2);
+    border-color: rgba(37,99,235,0.3);
+}
+
+/* Position grid (2x2) */
+.position-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 3px;
+    width: 44px;
+    height: 34px;
+}
+.position-cell {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 150ms;
+}
+.position-cell:hover {
+    background: rgba(37,99,235,0.2);
+    border-color: rgba(37,99,235,0.3);
+}
+.position-cell.active {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+/* Conditional row (dimension pixels) */
+.sub-row {
+    padding: 6px 14px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+var i18n = {
+    en: {
+        general: "General",
+        language: "Language",
+        launchAtLogin: "Launch at login",
+        capture: "Capture",
+        autoCopy: "Auto-copy to clipboard",
+        outputFormat: "Output format",
+        maxDimension: "Max image dimension",
+        maxDimensionNone: "None",
+        maxDimensionWidth: "Max Width",
+        maxDimensionHeight: "Max Height",
+        dimensionPixels: "Pixels",
+        dimensionHint: "Claude: 1568px / GPT-4o: 2048px",
+        gifQuality: "GIF quality",
+        recording: "Recording",
+        maxDuration: "Max duration",
+        gifFps: "GIF FPS",
+        shortcuts: "Shortcuts",
+        areaCapture: "Area capture",
+        fullscreen: "Fullscreen",
+        record: "Record",
+        preview: "Preview",
+        position: "Position",
+        maxOnScreen: "Max on screen",
+        saveLocation: "Save location",
+        browse: "..."
+    },
+    ja: {
+        general: "\u4e00\u822c",
+        language: "\u8a00\u8a9e",
+        launchAtLogin: "\u30ed\u30b0\u30a4\u30f3\u6642\u306b\u8d77\u52d5",
+        capture: "\u30ad\u30e3\u30d7\u30c1\u30e3",
+        autoCopy: "\u81ea\u52d5\u3067\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc",
+        outputFormat: "\u51fa\u529b\u30d5\u30a9\u30fc\u30de\u30c3\u30c8",
+        maxDimension: "\u753b\u50cf\u306e\u6700\u5927\u30b5\u30a4\u30ba",
+        maxDimensionNone: "\u306a\u3057",
+        maxDimensionWidth: "\u6700\u5927\u5e45",
+        maxDimensionHeight: "\u6700\u5927\u9ad8\u3055",
+        dimensionPixels: "\u30d4\u30af\u30bb\u30eb",
+        dimensionHint: "Claude: 1568px / GPT-4o: 2048px",
+        gifQuality: "GIF\u753b\u8cea",
+        recording: "\u9332\u753b",
+        maxDuration: "\u6700\u5927\u6642\u9593",
+        gifFps: "GIF FPS",
+        shortcuts: "\u30b7\u30e7\u30fc\u30c8\u30ab\u30c3\u30c8",
+        areaCapture: "\u7bc4\u56f2\u30ad\u30e3\u30d7\u30c1\u30e3",
+        fullscreen: "\u30d5\u30eb\u30b9\u30af\u30ea\u30fc\u30f3",
+        record: "\u8a18\u9332",
+        preview: "\u30d7\u30ec\u30d3\u30e5\u30fc",
+        position: "\u4f4d\u7f6e",
+        maxOnScreen: "\u753b\u9762\u4e0a\u306e\u6700\u5927\u6570",
+        saveLocation: "\u4fdd\u5b58\u5148",
+        browse: "..."
+    },
+    zh: {
+        general: "\u901a\u7528",
+        language: "\u8bed\u8a00",
+        launchAtLogin: "\u767b\u5f55\u65f6\u542f\u52a8",
+        capture: "\u622a\u56fe",
+        autoCopy: "\u81ea\u52a8\u590d\u5236\u5230\u526a\u8d34\u677f",
+        outputFormat: "\u8f93\u51fa\u683c\u5f0f",
+        maxDimension: "\u6700\u5927\u56fe\u50cf\u5c3a\u5bf8",
+        maxDimensionNone: "\u65e0",
+        maxDimensionWidth: "\u6700\u5927\u5bbd\u5ea6",
+        maxDimensionHeight: "\u6700\u5927\u9ad8\u5ea6",
+        dimensionPixels: "\u50cf\u7d20",
+        dimensionHint: "Claude: 1568px / GPT-4o: 2048px",
+        gifQuality: "GIF\u753b\u8d28",
+        recording: "\u5f55\u5236",
+        maxDuration: "\u6700\u5927\u65f6\u957f",
+        gifFps: "GIF FPS",
+        shortcuts: "\u5feb\u6377\u952e",
+        areaCapture: "\u533a\u57df\u622a\u56fe",
+        fullscreen: "\u5168\u5c4f",
+        record: "\u8bb0\u5f55",
+        preview: "\u9884\u89c8",
+        position: "\u4f4d\u7f6e",
+        maxOnScreen: "\u5c4f\u5e55\u4e0a\u6700\u5927\u6570\u91cf",
+        saveLocation: "\u4fdd\u5b58\u4f4d\u7f6e",
+        browse: "..."
+    },
+    ko: {
+        general: "\uc77c\ubc18",
+        language: "\uc5b8\uc5b4",
+        launchAtLogin: "\ub85c\uadf8\uc778 \uc2dc \uc2dc\uc791",
+        capture: "\ucea1\ucc98",
+        autoCopy: "\ud074\ub9bd\ubcf4\ub4dc\uc5d0 \uc790\ub3d9 \ubcf5\uc0ac",
+        outputFormat: "\ucd9c\ub825 \ud615\uc2dd",
+        maxDimension: "\ucd5c\ub300 \uc774\ubbf8\uc9c0 \ud06c\uae30",
+        maxDimensionNone: "\uc5c6\uc74c",
+        maxDimensionWidth: "\ucd5c\ub300 \ub108\ube44",
+        maxDimensionHeight: "\ucd5c\ub300 \ub192\uc774",
+        dimensionPixels: "\ud53d\uc140",
+        dimensionHint: "Claude: 1568px / GPT-4o: 2048px",
+        gifQuality: "GIF \ud488\uc9c8",
+        recording: "\ub179\ud654",
+        maxDuration: "\ucd5c\ub300 \uc2dc\uac04",
+        gifFps: "GIF FPS",
+        shortcuts: "\ub2e8\ucd95\ud0a4",
+        areaCapture: "\uc601\uc5ed \ucea1\ucc98",
+        fullscreen: "\uc804\uccb4 \ud654\uba74",
+        record: "\uae30\ub85d",
+        preview: "\ubbf8\ub9ac\ubcf4\uae30",
+        position: "\uc704\uce58",
+        maxOnScreen: "\ud654\uba74 \ucd5c\ub300 \uac1c\uc218",
+        saveLocation: "\uc800\uc7a5 \uc704\uce58",
+        browse: "..."
+    },
+    de: {
+        general: "Allgemein",
+        language: "Sprache",
+        launchAtLogin: "Beim Anmelden starten",
+        capture: "Aufnahme",
+        autoCopy: "Automatisch in Zwischenablage kopieren",
+        outputFormat: "Ausgabeformat",
+        maxDimension: "Maximale Bildgr\u00f6\u00dfe",
+        maxDimensionNone: "Keine",
+        maxDimensionWidth: "Maximale Breite",
+        maxDimensionHeight: "Maximale H\u00f6he",
+        dimensionPixels: "Pixel",
+        dimensionHint: "Claude: 1568px / GPT-4o: 2048px",
+        gifQuality: "GIF-Qualit\u00e4t",
+        recording: "Aufzeichnung",
+        maxDuration: "Maximale Dauer",
+        gifFps: "GIF FPS",
+        shortcuts: "Tastaturk\u00fcrzel",
+        areaCapture: "Bereichsaufnahme",
+        fullscreen: "Vollbild",
+        record: "Aufnehmen",
+        preview: "Vorschau",
+        position: "Position",
+        maxOnScreen: "Max. auf Bildschirm",
+        saveLocation: "Speicherort",
+        browse: "..."
+    },
+    es: {
+        general: "General",
+        language: "Idioma",
+        launchAtLogin: "Iniciar al iniciar sesi\u00f3n",
+        capture: "Captura",
+        autoCopy: "Copiar autom\u00e1ticamente al portapapeles",
+        outputFormat: "Formato de salida",
+        maxDimension: "Dimensi\u00f3n m\u00e1xima de imagen",
+        maxDimensionNone: "Ninguno",
+        maxDimensionWidth: "Ancho m\u00e1ximo",
+        maxDimensionHeight: "Altura m\u00e1xima",
+        dimensionPixels: "P\u00edxeles",
+        dimensionHint: "Claude: 1568px / GPT-4o: 2048px",
+        gifQuality: "Calidad GIF",
+        recording: "Grabaci\u00f3n",
+        maxDuration: "Duraci\u00f3n m\u00e1xima",
+        gifFps: "GIF FPS",
+        shortcuts: "Atajos",
+        areaCapture: "Captura de \u00e1rea",
+        fullscreen: "Pantalla completa",
+        record: "Grabar",
+        preview: "Vista previa",
+        position: "Posici\u00f3n",
+        maxOnScreen: "M\u00e1x. en pantalla",
+        saveLocation: "Ubicaci\u00f3n de guardado",
+        browse: "..."
+    }
+};
+
+var langCodes = { en: 'English', ja: '\u65e5\u672c\u8a9e', zh: '\u4e2d\u6587\u7b80\u4f53', ko: '\ud55c\uad6d\uc5b4', de: 'Deutsch', es: 'Espa\u00f1ol' };
+
+var settings = {
+    language: 'en',
+    launchAtLogin: false,
+    autoCopy: true,
+    outputFormat: 'webp',
+    maxDimension: 'none',
+    maxDimensionPixels: 1568,
+    maxDuration: 30,
+    gifFps: 10,
+    gifQuality: 90,
+    shortcutArea: 'Alt+Shift+2',
+    shortcutFullscreen: 'Alt+Shift+3',
+    previewPosition: 'bottom-right',
+    previewMaxOnScreen: 5,
+    saveLocation: '~/Desktop',
+    // Fields without UI controls; preserved through load/save to avoid clobbering user values.
+    ocrEnabled: true,
+    smartMasking: false,
+    defaultProvider: 'claude'
+};
+
+var invoke = null;
+
+function t(key) {
+    var lang = settings.language || 'en';
+    return (i18n[lang] && i18n[lang][key]) || i18n.en[key] || key;
+}
+
+function render() {
+    var app = document.getElementById('app');
+    var posMap = { 'top-left': 0, 'top-right': 1, 'bottom-left': 2, 'bottom-right': 3 };
+    var posIdx = posMap[settings.previewPosition] !== undefined ? posMap[settings.previewPosition] : 3;
+    var showDimPx = settings.maxDimension !== 'none';
+
+    var langOpts = '';
+    for (var code in langCodes) {
+        langOpts += '<option value="' + code + '"' + (settings.language === code ? ' selected' : '') + '>' + langCodes[code] + '</option>';
+    }
+
+    var fpsOpts = '';
+    [5,10,15,20,30].forEach(function(v) {
+        fpsOpts += '<option value="' + v + '"' + (settings.gifFps === v ? ' selected' : '') + '>' + v + '</option>';
+    });
+
+    var maxScreenOpts = '';
+    for (var i = 1; i <= 10; i++) {
+        maxScreenOpts += '<option value="' + i + '"' + (settings.previewMaxOnScreen === i ? ' selected' : '') + '>' + i + '</option>';
+    }
+
+    var cells = '';
+    for (var c = 0; c < 4; c++) {
+        cells += '<div class="position-cell' + (c === posIdx ? ' active' : '') + '" data-pos="' + c + '"></div>';
+    }
+
+    app.innerHTML =
+        '<div class="section">' +
+            '<div class="section-title">' + t('general') + '</div>' +
+            '<div class="card">' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('language') + '</span>' +
+                    '<div class="row-right"><select id="s-language">' + langOpts + '</select></div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('launchAtLogin') + '</span>' +
+                    '<div class="row-right"><label class="toggle"><input type="checkbox" id="s-launchAtLogin"' + (settings.launchAtLogin ? ' checked' : '') + '><span class="slider"></span></label></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+
+        '<div class="section">' +
+            '<div class="section-title">' + t('capture') + '</div>' +
+            '<div class="card">' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('autoCopy') + '</span>' +
+                    '<div class="row-right"><label class="toggle"><input type="checkbox" id="s-autoCopy"' + (settings.autoCopy ? ' checked' : '') + '><span class="slider"></span></label></div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('outputFormat') + '</span>' +
+                    '<div class="row-right"><select id="s-outputFormat">' +
+                        '<option value="webp"' + (settings.outputFormat === 'webp' ? ' selected' : '') + '>WebP</option>' +
+                        '<option value="png"' + (settings.outputFormat === 'png' ? ' selected' : '') + '>PNG</option>' +
+                        '<option value="jpeg"' + (settings.outputFormat === 'jpeg' ? ' selected' : '') + '>JPEG</option>' +
+                    '</select></div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('maxDimension') + '</span>' +
+                    '<div class="row-right"><select id="s-maxDimension">' +
+                        '<option value="none"' + (settings.maxDimension === 'none' ? ' selected' : '') + '>' + t('maxDimensionNone') + '</option>' +
+                        '<option value="width"' + (settings.maxDimension === 'width' ? ' selected' : '') + '>' + t('maxDimensionWidth') + '</option>' +
+                        '<option value="height"' + (settings.maxDimension === 'height' ? ' selected' : '') + '>' + t('maxDimensionHeight') + '</option>' +
+                    '</select></div>' +
+                '</div>' +
+                '<div class="sub-row' + (showDimPx ? '' : ' hidden') + '" id="dim-px-row">' +
+                    '<span class="row-label">' + t('dimensionPixels') + '</span>' +
+                    '<div class="row-right">' +
+                        '<input type="number" id="s-maxDimensionPixels" min="100" max="8000" value="' + settings.maxDimensionPixels + '">' +
+                        '<span class="unit">px</span>' +
+                    '</div>' +
+                '</div>' +
+                (showDimPx ? '<div class="hint">' + t('dimensionHint') + '</div>' : '') +
+            '</div>' +
+        '</div>' +
+
+        '<div class="section">' +
+            '<div class="section-title">' + t('recording') + '</div>' +
+            '<div class="card">' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('maxDuration') + '</span>' +
+                    '<div class="row-right">' +
+                        '<input type="number" id="s-maxDuration" min="5" max="120" value="' + settings.maxDuration + '">' +
+                        '<span class="unit">sec</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('gifFps') + '</span>' +
+                    '<div class="row-right"><select id="s-gifFps">' + fpsOpts + '</select></div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('gifQuality') + '</span>' +
+                    '<div class="row-right">' +
+                        '<input type="number" id="s-gifQuality" min="1" max="100" value="' + settings.gifQuality + '">' +
+                        '<span class="unit">%</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+
+        '<div class="section">' +
+            '<div class="section-title">' + t('shortcuts') + '</div>' +
+            '<div class="card">' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('areaCapture') + '</span>' +
+                    '<div class="row-right"><div class="shortcut-display">' +
+                        '<span class="shortcut-keys">' + escHtml(settings.shortcutArea) + '</span>' +
+                        '<button class="btn-small" data-shortcut="area">' + t('record') + '</button>' +
+                    '</div></div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('fullscreen') + '</span>' +
+                    '<div class="row-right"><div class="shortcut-display">' +
+                        '<span class="shortcut-keys">' + escHtml(settings.shortcutFullscreen) + '</span>' +
+                        '<button class="btn-small" data-shortcut="fullscreen">' + t('record') + '</button>' +
+                    '</div></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+
+        '<div class="section">' +
+            '<div class="section-title">' + t('preview') + '</div>' +
+            '<div class="card">' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('position') + '</span>' +
+                    '<div class="row-right"><div class="position-grid" id="pos-grid">' + cells + '</div></div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('maxOnScreen') + '</span>' +
+                    '<div class="row-right"><select id="s-previewMaxOnScreen">' + maxScreenOpts + '</select></div>' +
+                '</div>' +
+                '<div class="row">' +
+                    '<span class="row-label">' + t('saveLocation') + '</span>' +
+                    '<div class="row-right" style="flex:1;min-width:0;margin-left:12px;">' +
+                        '<input type="text" id="s-saveLocation" value="' + escHtml(settings.saveLocation) + '" readonly>' +
+                        '<button class="btn-small" id="btn-browse">' + t('browse') + '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    bindEvents();
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function bindEvents() {
+    // Language
+    on('s-language', 'change', function(el) {
+        settings.language = el.value;
+        saveSettings();
+        render();
+    });
+
+    // Toggles
+    ['launchAtLogin','autoCopy'].forEach(function(key) {
+        on('s-' + key, 'change', function(el) {
+            settings[key] = el.checked;
+            saveSettings();
+        });
+    });
+
+    // Selects
+    on('s-outputFormat', 'change', function(el) { settings.outputFormat = el.value; saveSettings(); });
+    on('s-maxDimension', 'change', function(el) {
+        settings.maxDimension = el.value;
+        saveSettings();
+        render();
+    });
+    on('s-gifFps', 'change', function(el) { settings.gifFps = parseInt(el.value); saveSettings(); });
+    on('s-previewMaxOnScreen', 'change', function(el) { settings.previewMaxOnScreen = parseInt(el.value); saveSettings(); });
+
+    // Number inputs
+    on('s-maxDimensionPixels', 'change', function(el) {
+        var v = parseInt(el.value);
+        if (v < 100) v = 100;
+        if (v > 8000) v = 8000;
+        el.value = v;
+        settings.maxDimensionPixels = v;
+        saveSettings();
+    });
+    on('s-maxDuration', 'change', function(el) {
+        var v = parseInt(el.value);
+        if (v < 5) v = 5;
+        if (v > 120) v = 120;
+        el.value = v;
+        settings.maxDuration = v;
+        saveSettings();
+    });
+    on('s-gifQuality', 'change', function(el) {
+        var v = parseInt(el.value);
+        if (v < 1) v = 1;
+        if (v > 100) v = 100;
+        el.value = v;
+        settings.gifQuality = v;
+        saveSettings();
+    });
+
+    // Position grid
+    var grid = document.getElementById('pos-grid');
+    if (grid) {
+        var posNames = ['top-left','top-right','bottom-left','bottom-right'];
+        grid.addEventListener('click', function(e) {
+            var cell = e.target.closest('.position-cell');
+            if (!cell) return;
+            var idx = parseInt(cell.getAttribute('data-pos'));
+            settings.previewPosition = posNames[idx];
+            var cells = grid.querySelectorAll('.position-cell');
+            for (var i = 0; i < cells.length; i++) {
+                cells[i].classList.toggle('active', i === idx);
+            }
+            saveSettings();
+        });
+    }
+
+    // Browse button
+    var browseBtn = document.getElementById('btn-browse');
+    if (browseBtn) {
+        browseBtn.addEventListener('click', function() {
+            if (invoke) {
+                invoke('pick_save_directory').then(function(path) {
+                    if (path) {
+                        settings.saveLocation = path;
+                        document.getElementById('s-saveLocation').value = path;
+                        saveSettings();
+                    }
+                }).catch(function() {});
+            }
+        });
+    }
+}
+
+function on(id, evt, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener(evt, function() { fn(el); });
+}
+
+function saveSettings() {
+    if (!invoke) return;
+    // Convert JS settings shape to Rust Settings struct shape
+    var rustSettings = {
+        language: settings.language,
+        launchAtLogin: settings.launchAtLogin,
+        autoCopy: settings.autoCopy,
+        outputFormat: settings.outputFormat,
+        maxDimension: {
+            mode: settings.maxDimension,
+            pixels: settings.maxDimensionPixels
+        },
+        ocrEnabled: settings.ocrEnabled,
+        smartMasking: settings.smartMasking,
+        defaultProvider: settings.defaultProvider,
+        maxRecordingSec: settings.maxDuration,
+        gifFps: settings.gifFps,
+        gifQuality: settings.gifQuality,
+        shortcutArea: settings.shortcutArea,
+        shortcutFullscreen: settings.shortcutFullscreen,
+        previewPosition: settings.previewPosition.replace(/-/g, '_'),
+        maxPreviews: settings.previewMaxOnScreen,
+        saveLocation: settings.saveLocation
+    };
+    invoke('update_settings', { settings: rustSettings })
+        .catch(function (err) {
+            console.error('Failed to save settings:', err);
+        });
+}
+
+function populateForm(s) {
+    if (!s) return;
+    // Map Rust camelCase keys to JS settings keys where they differ
+    var rustToJs = {
+        maxRecordingSec: 'maxDuration',
+        maxPreviews: 'previewMaxOnScreen',
+        shortcutArea: 'shortcutArea',
+        shortcutFullscreen: 'shortcutFullscreen'
+    };
+    for (var key in s) {
+        if (!s.hasOwnProperty(key)) continue;
+        var jsKey = rustToJs[key] || key;
+        // Handle maxDimension nested object -> flat JS fields
+        if (key === 'maxDimension' && typeof s[key] === 'object' && s[key] !== null) {
+            settings.maxDimension = s[key].mode || 'none';
+            settings.maxDimensionPixels = s[key].pixels || 1568;
+            continue;
+        }
+        // Handle previewPosition format: underscore -> hyphen
+        if (key === 'previewPosition' && typeof s[key] === 'string') {
+            settings.previewPosition = s[key].replace(/_/g, '-');
+            continue;
+        }
+        if (settings.hasOwnProperty(jsKey)) {
+            settings[jsKey] = s[key];
+        }
+    }
+    render();
+}
+
+function boot(attempt) {
+    if (!window.__TAURI__ || !window.__TAURI__.core) {
+        if (attempt < 200) setTimeout(function() { boot(attempt + 1); }, 16);
+        return;
+    }
+    invoke = window.__TAURI__.core.invoke;
+    invoke('get_settings').then(function(s) {
+        populateForm(s);
+    }).catch(function() {
+        render();
+    });
+}
+
+// Initial render with defaults (before Tauri loads)
+render();
+boot(0);
+</script>
+</body>
+</html>

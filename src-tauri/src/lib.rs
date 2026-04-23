@@ -38,6 +38,8 @@ pub fn run() {
             commands::capture::get_screen_size,
             commands::capture::reposition_preview,
             commands::pipeline::optimize_for_llm,
+            commands::onboarding::mark_onboarding_complete,
+            commands::onboarding::open_screen_recording_settings,
             settings::get_settings,
             settings::update_settings,
         ])
@@ -56,6 +58,11 @@ pub fn run() {
 
             // Watch settings.json for external edits (CLI-driven changes etc.)
             crate::settings::spawn_settings_watcher(app.handle().clone());
+
+            // Show onboarding on first launch (or whenever settings.onboarding_completed is false).
+            if !crate::settings::load_settings(app.handle()).onboarding_completed {
+                tray::open_onboarding_window(app.handle());
+            }
 
             tracing::info!("Gaze started (menu-bar only mode)");
             Ok(())

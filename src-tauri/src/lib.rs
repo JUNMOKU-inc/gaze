@@ -6,11 +6,12 @@ mod logging;
 pub(crate) mod preview_window;
 mod recording;
 mod settings;
+mod shortcut;
 mod state;
 mod tray;
 
 use state::AppState;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -75,51 +76,68 @@ pub fn run() {
         });
 }
 
-fn register_global_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    // Use Option+Shift to avoid conflicting with macOS native Cmd+Shift+3/4 screenshots
-    let fullscreen_shortcut = Shortcut::new(Some(Modifiers::ALT | Modifiers::SHIFT), Code::Digit3);
-    let area_shortcut = Shortcut::new(Some(Modifiers::ALT | Modifiers::SHIFT), Code::Digit2);
+/// Register the four capture shortcuts from the current settings.
+///
+/// Each shortcut is registered independently so a malformed or rejected entry
+/// (e.g. a string that no longer parses, or an OS that refuses the binding)
+/// only disables that one — the rest still work.
+pub fn register_global_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let settings = crate::settings::load_settings(app);
 
-    let app_handle = app.clone();
-    app.global_shortcut()
-        .on_shortcut(fullscreen_shortcut, move |_app, shortcut, event| {
-            if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                tracing::info!(?shortcut, "Global shortcut: fullscreen capture");
-                tray::trigger_fullscreen_capture(&app_handle);
-            }
-        })?;
-
-    let app_handle = app.clone();
-    app.global_shortcut()
-        .on_shortcut(area_shortcut, move |_app, shortcut, event| {
-            if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                tracing::info!(?shortcut, "Global shortcut: area capture");
-                tray::trigger_area_capture(&app_handle);
-            }
-        })?;
-
-    let window_shortcut = Shortcut::new(Some(Modifiers::ALT | Modifiers::SHIFT), Code::Digit1);
-    let app_handle = app.clone();
-    app.global_shortcut()
-        .on_shortcut(window_shortcut, move |_app, shortcut, event| {
-            if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                tracing::info!(?shortcut, "Global shortcut: window capture");
-                tray::trigger_window_capture(&app_handle);
-            }
-        })?;
-
-    let gif_shortcut = Shortcut::new(Some(Modifiers::ALT | Modifiers::SHIFT), Code::Digit5);
-    let app_handle = app.clone();
-    app.global_shortcut()
-        .on_shortcut(gif_shortcut, move |_app, shortcut, event| {
-            if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                tracing::info!(?shortcut, "Global shortcut: toggle GIF recording");
-                tray::toggle_gif_recording(&app_handle);
-            }
-        })?;
-
-    tracing::info!(
-        "Global shortcuts registered: Option+Shift+1 (window), Option+Shift+2 (area), Option+Shift+3 (fullscreen), Option+Shift+5 (GIF record)"
+    register_one(
+        app,
+        "fullscreen",
+        &settings.shortcut_fullscreen,
+        tray::trigger_fullscreen_capture,
     );
+    register_one(
+        app,
+        "area",
+        &settings.shortcut_area,
+        tray::trigger_area_capture,
+    );
+    register_one(
+        app,
+        "window",
+        &settings.shortcut_window,
+        tray::trigger_window_capture,
+    );
+    register_one(
+        app,
+        "gif",
+        &settings.shortcut_gif,
+        tray::toggle_gif_recording,
+    );
+
     Ok(())
+}
+
+fn register_one(
+    app: &tauri::AppHandle,
+    name: &'static str,
+    spec: &str,
+    trigger: fn(&tauri::AppHandle),
+) {
+    let parsed = match crate::shortcut::parse_shortcut(spec) {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(name, spec, error = %e, "Invalid shortcut; skipping registration");
+            return;
+        }
+    };
+
+    let app_handle = app.clone();
+    let result = app
+        .global_shortcut()
+        .on_shortcut(parsed, move |_app, sc, event| {
+            if event.state == ShortcutState::Pressed {
+                tracing::info!(name, ?sc, "Global shortcut fired");
+                trigger(&app_handle);
+            }
+        });
+
+    match result {
+        Ok(()) => tracing::info!(name, spec, "Global shortcut registered"),
+        Err(e) => tracing::warn!(name, spec, error = %e, "Failed to register shortcut"),
+    }
 }

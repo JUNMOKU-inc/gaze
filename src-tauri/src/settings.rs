@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager as _};
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 pub use snapforge_core::Settings;
 
@@ -188,7 +189,30 @@ fn apply_external_settings_change(app: &AppHandle, last_applied: &mut Settings) 
         }
     }
 
+    if shortcuts_changed(&new_settings, last_applied) {
+        reapply_shortcuts(app);
+    }
+
     *last_applied = new_settings;
+}
+
+fn shortcuts_changed(new: &Settings, old: &Settings) -> bool {
+    new.shortcut_area != old.shortcut_area
+        || new.shortcut_fullscreen != old.shortcut_fullscreen
+        || new.shortcut_window != old.shortcut_window
+        || new.shortcut_gif != old.shortcut_gif
+}
+
+/// Re-register all global shortcuts. Cheap (4 entries) and avoids the
+/// per-shortcut diff bookkeeping that would otherwise be needed to swap
+/// just the changed binding.
+fn reapply_shortcuts(app: &AppHandle) {
+    if let Err(e) = app.global_shortcut().unregister_all() {
+        tracing::warn!(error = %e, "Failed to unregister old shortcuts before reapply");
+    }
+    if let Err(e) = crate::register_global_shortcuts(app) {
+        tracing::warn!(error = %e, "Failed to re-register shortcuts after settings change");
+    }
 }
 
 #[cfg(test)]

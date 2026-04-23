@@ -2,6 +2,7 @@ mod annotation;
 mod capture;
 mod output;
 mod settings;
+mod shortcut;
 
 pub use annotation::{
     apply_annotations_to_processed_capture, build_llm_prompt_hint,
@@ -19,6 +20,7 @@ pub use settings::{
     save_settings, set_setting_field, settings_path_for_identifier, MaxDimension, Settings,
     SettingsError, GAZE_BUNDLE_IDENTIFIER, SETTINGS_KEYS,
 };
+pub use shortcut::validate_shortcut_str;
 
 use thiserror::Error;
 

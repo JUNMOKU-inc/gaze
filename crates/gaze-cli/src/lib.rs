@@ -1,8 +1,10 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 use snapforge_core::{
-    process_image_bytes, process_image_bytes_with_mode, process_rgba_capture_with_mode,
-    CaptureProcessingMode, ProcessedCapture, Settings, SETTINGS_KEYS,
+    apply_annotations_to_processed_capture, build_llm_prompt_hint_for_language,
+    load_settings_or_default, process_image_bytes, process_image_bytes_with_mode,
+    process_rgba_capture_with_mode, Annotation, CaptureProcessingMode, ProcessedCapture, Settings,
+    SETTINGS_KEYS,
 };
 use snapforge_pipeline::LlmProvider;
 use std::ffi::OsString;
@@ -131,6 +133,9 @@ struct CaptureArgs {
 
     #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
     format: OutputFormat,
+
+    #[command(flatten)]
+    annotations: AnnotationArgs,
 }
 
 #[derive(Debug, Args)]
@@ -148,6 +153,20 @@ struct OptimizeArgs {
 
     #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
     format: OutputFormat,
+
+    #[command(flatten)]
+    annotations: AnnotationArgs,
+}
+
+#[derive(Debug, Args, Default, Clone, PartialEq, Eq)]
+struct AnnotationArgs {
+    /// Add a numbered pin in absolute pixels: `--pin 640,320[:note]`
+    #[arg(long = "pin", value_name = "X,Y[:NOTE]")]
+    pins: Vec<String>,
+
+    /// Add a labelled rectangle in absolute pixels: `--rect 120,80,400,200[:note]`
+    #[arg(long = "rect", value_name = "X,Y,W,H[:NOTE]")]
+    rects: Vec<String>,
 }
 
 #[derive(Debug, Args)]
@@ -193,7 +212,7 @@ impl From<ProviderArg> for LlmProvider {
     }
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct CaptureCommandOutput {
     original_width: u32,
@@ -208,10 +227,19 @@ struct CaptureCommandOutput {
     image_base64: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     output_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prompt_hint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    annotations: Option<Vec<Annotation>>,
 }
 
 impl CaptureCommandOutput {
-    fn from_processed(processed: &ProcessedCapture, output_path: Option<&Path>) -> Self {
+    fn from_processed(
+        processed: &ProcessedCapture,
+        output_path: Option<&Path>,
+        prompt_hint: Option<String>,
+        annotations: &[Annotation],
+    ) -> Self {
         let metadata = &processed.metadata;
         Self {
             original_width: metadata.original_width,
@@ -224,6 +252,8 @@ impl CaptureCommandOutput {
             timestamp: metadata.timestamp.clone(),
             image_base64: output_path.is_none().then(|| metadata.image_base64.clone()),
             output_path: output_path.map(|path| path.display().to_string()),
+            prompt_hint,
+            annotations: (!annotations.is_empty()).then(|| annotations.to_vec()),
         }
     }
 }
@@ -382,6 +412,21 @@ fn load_settings_for_cli(path: &Path) -> Result<Settings, RunError> {
     snapforge_core::load_settings(path).map_err(map_settings_error)
 }
 
+fn resolve_prompt_language_for_cli() -> String {
+    match snapforge_core::default_settings_path() {
+        Ok(path) => {
+            let settings = load_settings_or_default(&path);
+            let language = settings.language.trim();
+            if language.is_empty() {
+                "en".to_string()
+            } else {
+                language.to_string()
+            }
+        }
+        Err(_) => "en".to_string(),
+    }
+}
+
 fn map_settings_error(err: snapforge_core::SettingsError) -> RunError {
     use snapforge_core::SettingsError;
     match err {
@@ -408,7 +453,7 @@ where
     };
 
     let target = resolve_capture_target(&args)?;
-    let processed = match target {
+    let mut processed = match target {
         CaptureTarget::Full { display_id } => {
             let capture = backend
                 .capture_fullscreen(display_id)
@@ -453,6 +498,18 @@ where
         }
     };
 
+    let annotations = parse_annotations(
+        &args.annotations,
+        processed.metadata.optimized_width,
+        processed.metadata.optimized_height,
+    )?;
+    let prompt_language = resolve_prompt_language_for_cli();
+    let prompt_hint = build_llm_prompt_hint_for_language(&annotations, &prompt_language);
+    if !annotations.is_empty() {
+        processed = apply_annotations_to_processed_capture(processed, &annotations)
+            .map_err(|e| RunError::runtime(e.to_string()))?;
+    }
+
     write_output_if_requested(args.output.as_deref(), &processed.encoded)?;
 
     if args.copy {
@@ -465,7 +522,14 @@ where
             .map_err(RunError::runtime)?;
     }
 
-    emit_capture_output(stdout, args.format, &processed, args.output.as_deref())
+    emit_capture_output(
+        stdout,
+        args.format,
+        &processed,
+        args.output.as_deref(),
+        prompt_hint,
+        &annotations,
+    )
 }
 
 fn run_list<B, W>(args: ListArgs, backend: &B, stdout: &mut W) -> Result<(), RunError>
@@ -494,8 +558,20 @@ where
 
     let input_bytes = std::fs::read(&args.input)
         .map_err(|e| RunError::runtime(format!("Failed to read input file: {e}")))?;
-    let processed = process_image_bytes(&input_bytes, args.provider.into())
+    let mut processed = process_image_bytes(&input_bytes, args.provider.into())
         .map_err(|e| RunError::runtime(e.to_string()))?;
+
+    let annotations = parse_annotations(
+        &args.annotations,
+        processed.metadata.optimized_width,
+        processed.metadata.optimized_height,
+    )?;
+    let prompt_language = resolve_prompt_language_for_cli();
+    let prompt_hint = build_llm_prompt_hint_for_language(&annotations, &prompt_language);
+    if !annotations.is_empty() {
+        processed = apply_annotations_to_processed_capture(processed, &annotations)
+            .map_err(|e| RunError::runtime(e.to_string()))?;
+    }
 
     write_output_if_requested(args.output.as_deref(), &processed.encoded)?;
 
@@ -509,7 +585,14 @@ where
             .map_err(RunError::runtime)?;
     }
 
-    emit_capture_output(stdout, args.format, &processed, args.output.as_deref())
+    emit_capture_output(
+        stdout,
+        args.format,
+        &processed,
+        args.output.as_deref(),
+        prompt_hint,
+        &annotations,
+    )
 }
 
 fn ensure_permission<B: CaptureBackend>(backend: &B) -> Result<(), RunError> {
@@ -533,6 +616,82 @@ fn validate_output_requirements(
     }
 
     Ok(())
+}
+
+fn parse_annotations(
+    args: &AnnotationArgs,
+    image_width: u32,
+    image_height: u32,
+) -> Result<Vec<Annotation>, RunError> {
+    let mut annotations = Vec::new();
+
+    for (index, spec) in args.pins.iter().enumerate() {
+        let (coords, note) = split_annotation_spec(spec);
+        let values = parse_f32_list(coords, 2, "--pin")?;
+        annotations.push(Annotation::pin(
+            index,
+            normalize_coordinate(values[0], image_width, "--pin x")?,
+            normalize_coordinate(values[1], image_height, "--pin y")?,
+            note,
+        ));
+    }
+
+    for (index, spec) in args.rects.iter().enumerate() {
+        let (coords, note) = split_annotation_spec(spec);
+        let values = parse_f32_list(coords, 4, "--rect")?;
+        annotations.push(Annotation::rectangle(
+            index,
+            normalize_coordinate(values[0], image_width, "--rect x")?,
+            normalize_coordinate(values[1], image_height, "--rect y")?,
+            normalize_extent(values[2], image_width, "--rect width")?,
+            normalize_extent(values[3], image_height, "--rect height")?,
+            note,
+        ));
+    }
+
+    Ok(annotations)
+}
+
+fn split_annotation_spec(spec: &str) -> (&str, Option<String>) {
+    if let Some((coords, note)) = spec.split_once(':') {
+        (coords, Some(note.trim().to_string()))
+    } else {
+        (spec, None)
+    }
+}
+
+fn parse_f32_list(spec: &str, expected: usize, flag: &str) -> Result<Vec<f32>, RunError> {
+    let values: Result<Vec<f32>, _> = spec
+        .split(',')
+        .map(|part| part.trim().parse::<f32>())
+        .collect();
+    let values =
+        values.map_err(|e| RunError::usage(format!("{flag} expects numeric values: {e}")))?;
+    if values.len() != expected {
+        return Err(RunError::usage(format!(
+            "{flag} expects {expected} comma-separated numbers"
+        )));
+    }
+    Ok(values)
+}
+
+fn normalize_coordinate(value: f32, max: u32, field: &str) -> Result<f32, RunError> {
+    if value < 0.0 {
+        return Err(RunError::usage(format!("{field} must be >= 0")));
+    }
+    if max == 0 {
+        return Err(RunError::runtime(
+            "Cannot normalize annotations for a zero-sized image".to_string(),
+        ));
+    }
+    Ok((value / max as f32).clamp(0.0, 1.0))
+}
+
+fn normalize_extent(value: f32, max: u32, field: &str) -> Result<f32, RunError> {
+    if value <= 0.0 {
+        return Err(RunError::usage(format!("{field} must be > 0")));
+    }
+    normalize_coordinate(value, max, field)
 }
 
 fn resolve_capture_target(args: &CaptureArgs) -> Result<CaptureTarget, RunError> {
@@ -592,11 +751,13 @@ fn emit_capture_output<W: Write>(
     format: OutputFormat,
     processed: &ProcessedCapture,
     output_path: Option<&Path>,
+    prompt_hint: Option<String>,
+    annotations: &[Annotation],
 ) -> Result<(), RunError> {
     match format {
         OutputFormat::Json => emit_json(
             stdout,
-            &CaptureCommandOutput::from_processed(processed, output_path),
+            &CaptureCommandOutput::from_processed(processed, output_path, prompt_hint, annotations),
         ),
         OutputFormat::Base64 => writeln!(stdout, "{}", processed.metadata.image_base64)
             .map_err(|e| RunError::runtime(format!("Failed to write base64 output: {e}"))),
@@ -889,6 +1050,37 @@ mod tests {
         assert_eq!(code, EXIT_SUCCESS);
         assert!(!stdout.contains('{'));
         assert!(stdout.trim().len() > 10);
+    }
+
+    #[test]
+    fn capture_with_annotations_emits_prompt_hint_and_annotations() {
+        let backend = FakeBackend::successful();
+        let (code, stdout, stderr) = run(
+            &[
+                "gaze",
+                "capture",
+                "--pin",
+                "80,45:broken button",
+                "--rect",
+                "10,10,40,20:spacing issue",
+            ],
+            &backend,
+        );
+
+        assert_eq!(code, EXIT_SUCCESS, "stderr: {stderr}");
+        let payload: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        assert!(payload["promptHint"].as_str().unwrap().contains("Pin 1"));
+        assert_eq!(payload["annotations"].as_array().unwrap().len(), 2);
+        assert_eq!(payload["annotations"][0]["id"], "1");
+        assert_eq!(payload["annotations"][1]["id"], "A");
+    }
+
+    #[test]
+    fn capture_rejects_invalid_rect_size() {
+        let backend = FakeBackend::successful();
+        let (code, _, stderr) = run(&["gaze", "capture", "--rect", "10,10,0,20:bad"], &backend);
+        assert_eq!(code, EXIT_USAGE);
+        assert!(stderr.contains("--rect width must be > 0"));
     }
 
     #[test]
@@ -1319,7 +1511,8 @@ mod tests {
             rgba: vec![255, 0, 0, 255],
         };
 
-        let output = CaptureCommandOutput::from_processed(&processed, Some(Path::new("/tmp/x")));
+        let output =
+            CaptureCommandOutput::from_processed(&processed, Some(Path::new("/tmp/x")), None, &[]);
         assert_eq!(output.image_base64, None);
         assert_eq!(output.output_path.as_deref(), Some("/tmp/x"));
     }

@@ -2,4 +2,4 @@ pub mod error;
 pub mod optimizer;
 
 pub use error::PipelineError;
-pub use optimizer::{optimize_image, LlmProvider, OptimizeOptions, OptimizeResult};
+pub use optimizer::{optimize_image, OptimizeOptions, OptimizeResult};

@@ -6,7 +6,6 @@ use snapforge_core::{
     process_rgba_capture_with_mode, Annotation, CaptureProcessingMode, ProcessedCapture, Settings,
     SETTINGS_KEYS,
 };
-use snapforge_pipeline::LlmProvider;
 use std::ffi::OsString;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -89,15 +88,15 @@ struct SettingsArgs {
 enum SettingsCommand {
     /// Print all settings or a single field as JSON
     Get {
-        /// Key to read (e.g. `defaultProvider`, `maxDimension.pixels`). Omit to print all.
+        /// Key to read (e.g. `language`, `maxDimension.pixels`). Omit to print all.
         key: Option<String>,
     },
     /// Update a single setting field
     Set {
-        /// Key to write (e.g. `defaultProvider`, `launchAtLogin`).
+        /// Key to write (e.g. `language`, `launchAtLogin`).
         key: String,
         /// New value. Parsed as JSON when possible so `true`, `42`, `"foo"` all work; bare
-        /// identifiers like `claude` are treated as strings.
+        /// identifiers like `ja` are treated as strings.
         value: String,
     },
     /// Reset all settings to defaults
@@ -119,9 +118,6 @@ struct CaptureArgs {
     #[arg(short, long)]
     window: Option<u32>,
 
-    #[arg(short, long, value_enum, default_value_t = ProviderArg::Claude)]
-    provider: ProviderArg,
-
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -141,9 +137,6 @@ struct CaptureArgs {
 #[derive(Debug, Args)]
 struct OptimizeArgs {
     input: PathBuf,
-
-    #[arg(short, long, value_enum, default_value_t = ProviderArg::Claude)]
-    provider: ProviderArg,
 
     #[arg(short, long)]
     output: Option<PathBuf>,
@@ -195,23 +188,6 @@ enum OutputFormat {
     Path,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-enum ProviderArg {
-    Claude,
-    Gpt,
-    Gemini,
-}
-
-impl From<ProviderArg> for LlmProvider {
-    fn from(value: ProviderArg) -> Self {
-        match value {
-            ProviderArg::Claude => LlmProvider::Claude,
-            ProviderArg::Gpt => LlmProvider::Gpt4o,
-            ProviderArg::Gemini => LlmProvider::Gemini,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct CaptureCommandOutput {
@@ -220,8 +196,6 @@ struct CaptureCommandOutput {
     optimized_width: u32,
     optimized_height: u32,
     file_size: usize,
-    token_estimate: u32,
-    provider: String,
     timestamp: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     image_base64: Option<String>,
@@ -247,8 +221,6 @@ impl CaptureCommandOutput {
             optimized_width: metadata.optimized_width,
             optimized_height: metadata.optimized_height,
             file_size: metadata.file_size,
-            token_estimate: metadata.token_estimate,
-            provider: metadata.provider.clone(),
             timestamp: metadata.timestamp.clone(),
             image_base64: output_path.is_none().then(|| metadata.image_base64.clone()),
             output_path: output_path.map(|path| path.display().to_string()),
@@ -445,7 +417,6 @@ where
     ensure_permission(backend)?;
     validate_output_requirements(args.format, args.output.as_deref())?;
 
-    let provider: LlmProvider = args.provider.into();
     let processing_mode = if args.raw {
         CaptureProcessingMode::Raw
     } else {
@@ -462,7 +433,6 @@ where
                 &capture.rgba,
                 capture.width,
                 capture.height,
-                provider,
                 processing_mode,
             )
             .map_err(|e| RunError::runtime(e.to_string()))?
@@ -472,7 +442,7 @@ where
                 .capture_area_interactive()
                 .map_err(RunError::runtime)?
                 .ok_or_else(|| RunError::cancelled("Capture cancelled by user"))?;
-            process_image_bytes_with_mode(&bytes, provider, processing_mode)
+            process_image_bytes_with_mode(&bytes, processing_mode)
                 .map_err(|e| RunError::runtime(e.to_string()))?
         }
         CaptureTarget::WindowDirect { window_id } => {
@@ -483,7 +453,6 @@ where
                 &capture.rgba,
                 capture.width,
                 capture.height,
-                provider,
                 processing_mode,
             )
             .map_err(|e| RunError::runtime(e.to_string()))?
@@ -493,7 +462,7 @@ where
                 .capture_window_interactive()
                 .map_err(RunError::runtime)?
                 .ok_or_else(|| RunError::cancelled("Capture cancelled by user"))?;
-            process_image_bytes_with_mode(&bytes, provider, processing_mode)
+            process_image_bytes_with_mode(&bytes, processing_mode)
                 .map_err(|e| RunError::runtime(e.to_string()))?
         }
     };
@@ -558,8 +527,8 @@ where
 
     let input_bytes = std::fs::read(&args.input)
         .map_err(|e| RunError::runtime(format!("Failed to read input file: {e}")))?;
-    let mut processed = process_image_bytes(&input_bytes, args.provider.into())
-        .map_err(|e| RunError::runtime(e.to_string()))?;
+    let mut processed =
+        process_image_bytes(&input_bytes).map_err(|e| RunError::runtime(e.to_string()))?;
 
     let annotations = parse_annotations(
         &args.annotations,
@@ -929,7 +898,6 @@ mod tests {
 
         let payload: serde_json::Value = serde_json::from_str(&stdout).unwrap();
         assert_eq!(payload["originalWidth"], 160);
-        assert_eq!(payload["provider"], "Claude");
         assert!(payload["imageBase64"].as_str().unwrap().len() > 10);
         assert!(payload.get("outputPath").is_none());
     }
@@ -1178,17 +1146,6 @@ mod tests {
     }
 
     #[test]
-    fn clap_parser_accepts_gpt_provider() {
-        let cli = Cli::try_parse_from(["gaze", "capture", "--provider", "gpt"]).unwrap();
-        let Commands::Capture(args) = cli.command else {
-            panic!("expected capture command");
-        };
-
-        assert_eq!(args.provider, ProviderArg::Gpt);
-        assert_eq!(LlmProvider::from(args.provider), LlmProvider::Gpt4o);
-    }
-
-    #[test]
     fn settings_get_without_file_emits_defaults() {
         let backend = FakeBackend::successful();
         let dir = tempdir().unwrap();
@@ -1202,7 +1159,7 @@ mod tests {
         assert_eq!(code, EXIT_SUCCESS, "stderr: {stderr}");
 
         let payload: serde_json::Value = serde_json::from_str(&stdout).unwrap();
-        assert_eq!(payload["defaultProvider"], "claude");
+        assert_eq!(payload["language"], "en");
         assert_eq!(payload["maxPreviews"], 5);
     }
 
@@ -1220,8 +1177,8 @@ mod tests {
                 "--config",
                 path_str.as_str(),
                 "set",
-                "defaultProvider",
-                "gpt",
+                "language",
+                "ja",
             ],
             &backend,
         );
@@ -1235,12 +1192,12 @@ mod tests {
                 "--config",
                 path_str.as_str(),
                 "get",
-                "defaultProvider",
+                "language",
             ],
             &backend,
         );
         assert_eq!(code, EXIT_SUCCESS);
-        assert_eq!(stdout.trim(), "\"gpt\"");
+        assert_eq!(stdout.trim(), "\"ja\"");
     }
 
     #[test]
@@ -1360,29 +1317,6 @@ mod tests {
     }
 
     #[test]
-    fn settings_set_rejects_unknown_provider() {
-        let backend = FakeBackend::successful();
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("settings.json");
-        let path_str = path.display().to_string();
-
-        let (code, _, stderr) = run(
-            &[
-                "gaze",
-                "settings",
-                "--config",
-                path_str.as_str(),
-                "set",
-                "defaultProvider",
-                "bogus",
-            ],
-            &backend,
-        );
-        assert_eq!(code, EXIT_USAGE);
-        assert!(stderr.contains("defaultProvider"));
-    }
-
-    #[test]
     fn settings_reset_writes_defaults() {
         let backend = FakeBackend::successful();
         let dir = tempdir().unwrap();
@@ -1390,7 +1324,7 @@ mod tests {
         let path_str = path.display().to_string();
 
         // Seed the file with a non-default value
-        std::fs::write(&path, r#"{"defaultProvider":"gpt","maxPreviews":9}"#).unwrap();
+        std::fs::write(&path, r#"{"language":"ja","maxPreviews":9}"#).unwrap();
 
         let (code, stdout, _) = run(
             &["gaze", "settings", "--config", path_str.as_str(), "reset"],
@@ -1404,7 +1338,7 @@ mod tests {
             &backend,
         );
         let payload: serde_json::Value = serde_json::from_str(&stdout).unwrap();
-        assert_eq!(payload["defaultProvider"], "claude");
+        assert_eq!(payload["language"], "en");
         assert_eq!(payload["maxPreviews"], 5);
     }
 
@@ -1451,7 +1385,7 @@ mod tests {
         let (code, stdout, _) = run(&["gaze", "settings", "keys"], &backend);
         assert_eq!(code, EXIT_SUCCESS);
         // Spot-check a few canonical keys so the listing stays in sync with Settings.
-        assert!(stdout.contains("defaultProvider"));
+        assert!(stdout.contains("language"));
         assert!(stdout.contains("launchAtLogin"));
         assert!(stdout.contains("maxDimension.pixels"));
     }
@@ -1464,7 +1398,7 @@ mod tests {
         let path_str = path.display().to_string();
 
         // Write initial settings with a known value for maxPreviews
-        std::fs::write(&path, r#"{"defaultProvider":"gpt","maxPreviews":7}"#).unwrap();
+        std::fs::write(&path, r#"{"language":"ja","maxPreviews":7}"#).unwrap();
 
         let (code, _, _) = run(
             &[
@@ -1473,8 +1407,8 @@ mod tests {
                 "--config",
                 path_str.as_str(),
                 "set",
-                "defaultProvider",
-                "gemini",
+                "language",
+                "fr",
             ],
             &backend,
         );
@@ -1485,7 +1419,7 @@ mod tests {
             &backend,
         );
         let payload: serde_json::Value = serde_json::from_str(&stdout).unwrap();
-        assert_eq!(payload["defaultProvider"], "gemini");
+        assert_eq!(payload["language"], "fr");
         assert_eq!(
             payload["maxPreviews"], 7,
             "set should not clobber unrelated fields"
@@ -1500,8 +1434,6 @@ mod tests {
             optimized_width: 1,
             optimized_height: 1,
             file_size: 4,
-            token_estimate: 1,
-            provider: "Claude".into(),
             timestamp: "2026-03-31T00:00:00Z".into(),
             image_base64: "AAAA".into(),
         };

@@ -37,7 +37,6 @@ pub fn run() {
             commands::capture::get_screen_size,
             commands::capture::reposition_preview,
             commands::pipeline::optimize_for_llm,
-            commands::pipeline::estimate_tokens,
             settings::get_settings,
             settings::update_settings,
         ])
@@ -50,10 +49,6 @@ pub fn run() {
             {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
-
-            // Load settings and apply default provider
-            let settings = crate::settings::load_settings(app.handle());
-            crate::settings::sync_provider_to_state(app.handle(), &settings.default_provider);
 
             // Register global hotkeys
             register_global_shortcuts(app.handle())?;

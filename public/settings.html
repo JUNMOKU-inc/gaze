@@ -425,8 +425,7 @@ var settings = {
     saveLocation: '~/Desktop',
     // Fields without UI controls; preserved through load/save to avoid clobbering user values.
     ocrEnabled: true,
-    smartMasking: false,
-    defaultProvider: 'claude'
+    smartMasking: false
 };
 
 var invoke = null;
@@ -688,7 +687,6 @@ function saveSettings() {
         },
         ocrEnabled: settings.ocrEnabled,
         smartMasking: settings.smartMasking,
-        defaultProvider: settings.defaultProvider,
         maxRecordingSec: settings.maxDuration,
         gifFps: settings.gifFps,
         gifQuality: settings.gifQuality,

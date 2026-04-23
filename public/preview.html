@@ -583,10 +583,6 @@ function boot(attempt) {
         if (kb < 1024) return Math.round(kb) + ' KB';
         return (kb / 1024).toFixed(1) + ' MB';
     }
-    function fmtTokens(t) {
-        if (t < 1000) return '~' + t + ' tok';
-        return '~' + (t / 1000).toFixed(1) + 'k tok';
-    }
     function fmtDuration(secs) {
         var s = Math.round(secs);
         if (s < 60) return s + 's';
@@ -603,9 +599,7 @@ function boot(attempt) {
     } else {
         document.getElementById('meta').innerHTML =
             data.optimizedWidth + '\u00d7' + data.optimizedHeight + sep +
-            fmtSize(data.fileSize) + sep +
-            fmtTokens(data.tokenEstimate) + sep +
-            data.provider;
+            fmtSize(data.fileSize);
     }
 
     invoke('get_settings')

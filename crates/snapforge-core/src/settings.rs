@@ -27,8 +27,6 @@ pub struct Settings {
     pub preview_position: String,
     pub max_previews: u32,
     pub save_location: String,
-
-    pub default_provider: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,8 +67,6 @@ impl Default for Settings {
             preview_position: "bottom_right".into(),
             max_previews: 5,
             save_location: "~/Desktop".into(),
-
-            default_provider: "claude".into(),
         }
     }
 }
@@ -191,7 +187,6 @@ pub const SETTINGS_KEYS: &[&str] = &[
     "previewPosition",
     "maxPreviews",
     "saveLocation",
-    "defaultProvider",
 ];
 
 /// Read a single field from a settings instance. Returns the JSON value of the field,
@@ -235,22 +230,8 @@ pub fn set_setting_field(
             reason: e.to_string(),
         })?;
 
-    validate_default_provider(&updated.default_provider)?;
-
     *settings = updated;
     Ok(())
-}
-
-/// Reject unknown provider strings at the settings boundary so invalid values never reach disk.
-fn validate_default_provider(value: &str) -> Result<(), SettingsError> {
-    serde_json::from_value::<snapforge_pipeline::LlmProvider>(serde_json::Value::String(
-        value.to_string(),
-    ))
-    .map(|_| ())
-    .map_err(|e| SettingsError::InvalidValue {
-        key: "defaultProvider".to_string(),
-        reason: e.to_string(),
-    })
 }
 
 fn parse_cli_value(raw: &str) -> serde_json::Value {
@@ -302,7 +283,6 @@ mod tests {
         let s = Settings::default();
         assert_eq!(s.language, "en");
         assert!(!s.launch_at_login);
-        assert_eq!(s.default_provider, "claude");
         assert_eq!(s.max_dimension.mode, "none");
         assert_eq!(s.max_dimension.pixels, 1568);
     }
@@ -321,14 +301,14 @@ mod tests {
         let path = dir.path().join("settings.json");
 
         let original = Settings {
-            default_provider: "gpt".into(),
+            language: "ja".into(),
             max_previews: 9,
             ..Default::default()
         };
         save_settings(&path, &original).unwrap();
 
         let loaded = load_settings(&path).unwrap();
-        assert_eq!(loaded.default_provider, "gpt");
+        assert_eq!(loaded.language, "ja");
         assert_eq!(loaded.max_previews, 9);
     }
 
@@ -360,8 +340,8 @@ mod tests {
     #[test]
     fn get_scalar_field() {
         let s = Settings::default();
-        let val = get_setting_field(&s, "defaultProvider").unwrap();
-        assert_eq!(val, serde_json::Value::String("claude".into()));
+        let val = get_setting_field(&s, "language").unwrap();
+        assert_eq!(val, serde_json::Value::String("en".into()));
     }
 
     #[test]
@@ -388,8 +368,8 @@ mod tests {
     #[test]
     fn set_string_field_with_unquoted_value() {
         let mut s = Settings::default();
-        set_setting_field(&mut s, "defaultProvider", "gpt").unwrap();
-        assert_eq!(s.default_provider, "gpt");
+        set_setting_field(&mut s, "language", "ja").unwrap();
+        assert_eq!(s.language, "ja");
     }
 
     #[test]
@@ -428,25 +408,6 @@ mod tests {
     }
 
     #[test]
-    fn set_rejects_unknown_provider() {
-        let mut s = Settings::default();
-        let err = set_setting_field(&mut s, "defaultProvider", "bogus").unwrap_err();
-        match err {
-            SettingsError::InvalidValue { key, .. } => assert_eq!(key, "defaultProvider"),
-            other => panic!("unexpected error: {other:?}"),
-        }
-    }
-
-    #[test]
-    fn set_accepts_all_known_providers() {
-        for provider in ["claude", "gpt", "gemini"] {
-            let mut s = Settings::default();
-            set_setting_field(&mut s, "defaultProvider", provider).unwrap();
-            assert_eq!(s.default_provider, provider);
-        }
-    }
-
-    #[test]
     fn settings_path_joins_identifier() {
         let path = settings_path_for_identifier("com.example.myapp").unwrap();
         let as_str = path.to_string_lossy();
@@ -472,7 +433,6 @@ mod tests {
             "\"previewPosition\"",
             "\"maxPreviews\"",
             "\"saveLocation\"",
-            "\"defaultProvider\"",
         ] {
             assert!(json.contains(key), "missing key {key} in {json}");
         }
@@ -520,7 +480,6 @@ mod tests {
             preview_position: "top_left".into(),
             max_previews: 10,
             save_location: "/tmp".into(),
-            default_provider: "gpt".into(),
             ..Default::default()
         };
         let json = serde_json::to_string_pretty(&s).unwrap();
@@ -540,6 +499,5 @@ mod tests {
         assert_eq!(s.preview_position, restored.preview_position);
         assert_eq!(s.max_previews, restored.max_previews);
         assert_eq!(s.save_location, restored.save_location);
-        assert_eq!(s.default_provider, restored.default_provider);
     }
 }

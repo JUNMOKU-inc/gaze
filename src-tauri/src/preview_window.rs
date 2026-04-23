@@ -21,8 +21,6 @@ pub struct GifPreviewData {
     pub optimized_width: u32,
     pub optimized_height: u32,
     pub file_size: usize,
-    pub token_estimate: u32,
-    pub provider: String,
     pub timestamp: String,
     pub image_base64: String,
     pub gif_base64: String,

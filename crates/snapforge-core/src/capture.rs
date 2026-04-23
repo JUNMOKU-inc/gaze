@@ -1,7 +1,7 @@
 use base64::Engine as _;
 use image::{DynamicImage, ImageReader};
 use serde::{Deserialize, Serialize};
-use snapforge_pipeline::{optimize_image, LlmProvider, OptimizeOptions};
+use snapforge_pipeline::{optimize_image, OptimizeOptions};
 use std::io::Cursor;
 use std::path::PathBuf;
 
@@ -15,8 +15,6 @@ pub struct CaptureMetadata {
     pub optimized_width: u32,
     pub optimized_height: u32,
     pub file_size: usize,
-    pub token_estimate: u32,
-    pub provider: String,
     pub timestamp: String,
     pub image_base64: String,
 }
@@ -41,19 +39,15 @@ pub fn temp_capture_path() -> PathBuf {
     ))
 }
 
-pub fn process_image_bytes(
-    raw_bytes: &[u8],
-    provider: LlmProvider,
-) -> Result<ProcessedCapture, CaptureFlowError> {
-    process_image_bytes_with_mode(raw_bytes, provider, CaptureProcessingMode::Optimized)
+pub fn process_image_bytes(raw_bytes: &[u8]) -> Result<ProcessedCapture, CaptureFlowError> {
+    process_image_bytes_with_mode(raw_bytes, CaptureProcessingMode::Optimized)
 }
 
 pub fn process_image_bytes_with_mode(
     raw_bytes: &[u8],
-    provider: LlmProvider,
     mode: CaptureProcessingMode,
 ) -> Result<ProcessedCapture, CaptureFlowError> {
-    let _root = tracing::info_span!("process_image_bytes", ?provider, ?mode).entered();
+    let _root = tracing::info_span!("process_image_bytes", ?mode).entered();
 
     let img = ImageReader::new(Cursor::new(raw_bytes))
         .with_guessed_format()
@@ -63,41 +57,28 @@ pub fn process_image_bytes_with_mode(
 
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
-    process_rgba_capture_with_mode(&rgba.into_raw(), width, height, provider, mode)
+    process_rgba_capture_with_mode(&rgba.into_raw(), width, height, mode)
 }
 
 pub fn process_rgba_capture(
     rgba_data: &[u8],
     width: u32,
     height: u32,
-    provider: LlmProvider,
 ) -> Result<ProcessedCapture, CaptureFlowError> {
-    process_rgba_capture_with_mode(
-        rgba_data,
-        width,
-        height,
-        provider,
-        CaptureProcessingMode::Optimized,
-    )
+    process_rgba_capture_with_mode(rgba_data, width, height, CaptureProcessingMode::Optimized)
 }
 
 pub fn process_rgba_capture_with_mode(
     rgba_data: &[u8],
     width: u32,
     height: u32,
-    provider: LlmProvider,
     mode: CaptureProcessingMode,
 ) -> Result<ProcessedCapture, CaptureFlowError> {
-    let _root =
-        tracing::info_span!("process_rgba_capture", ?provider, ?mode, width, height).entered();
+    let _root = tracing::info_span!("process_rgba_capture", ?mode, width, height).entered();
 
     let (encoded, rgba, optimized_width, optimized_height) = match mode {
         CaptureProcessingMode::Optimized => {
-            let options = OptimizeOptions {
-                provider,
-                ..Default::default()
-            };
-            let optimized = optimize_image(rgba_data, width, height, &options)?;
+            let optimized = optimize_image(rgba_data, width, height, &OptimizeOptions::default())?;
             (
                 optimized.encoded,
                 optimized.rgba,
@@ -119,8 +100,6 @@ pub fn process_rgba_capture_with_mode(
         optimized_width,
         optimized_height,
         file_size,
-        token_estimate: provider.estimate_tokens(optimized_width, optimized_height),
-        provider: format!("{provider:?}"),
         timestamp: chrono::Local::now().to_rfc3339(),
         image_base64,
     };
@@ -167,8 +146,6 @@ mod tests {
             optimized_width: 1568,
             optimized_height: 882,
             file_size: 42_000,
-            token_estimate: 1827,
-            provider: "Claude".to_string(),
             timestamp: "2026-03-27T12:00:00+09:00".to_string(),
             image_base64: "iVBOR...".to_string(),
         }
@@ -181,7 +158,6 @@ mod tests {
         assert!(json.contains("\"originalWidth\""));
         assert!(json.contains("\"optimizedHeight\""));
         assert!(json.contains("\"fileSize\""));
-        assert!(json.contains("\"tokenEstimate\""));
         assert!(json.contains("\"imageBase64\""));
         assert!(!json.contains("\"original_width\""));
     }
@@ -202,15 +178,12 @@ mod tests {
             "optimizedWidth": 784,
             "optimizedHeight": 588,
             "fileSize": 15000,
-            "tokenEstimate": 615,
-            "provider": "Gpt4o",
             "timestamp": "2026-03-27T12:00:00Z",
             "imageBase64": "AAAA"
         }"#;
         let restored: CaptureMetadata = serde_json::from_str(json).unwrap();
         assert_eq!(restored.original_width, 800);
         assert_eq!(restored.optimized_height, 588);
-        assert_eq!(restored.provider, "Gpt4o");
     }
 
     #[test]
@@ -236,10 +209,9 @@ mod tests {
     #[test]
     fn process_image_bytes_valid_png() {
         let png = create_test_png(100, 50);
-        let processed = process_image_bytes(&png, LlmProvider::Claude).unwrap();
+        let processed = process_image_bytes(&png).unwrap();
         assert_eq!(processed.metadata.original_width, 100);
         assert_eq!(processed.metadata.original_height, 50);
-        assert_eq!(processed.metadata.provider, "Claude");
         assert!(!processed.encoded.is_empty());
         assert!(!processed.rgba.is_empty());
     }
@@ -247,7 +219,7 @@ mod tests {
     #[test]
     fn process_image_bytes_large_image_resized() {
         let png = create_test_png(4000, 3000);
-        let processed = process_image_bytes(&png, LlmProvider::Claude).unwrap();
+        let processed = process_image_bytes(&png).unwrap();
         assert!(processed.metadata.optimized_width <= 1568);
         assert!(processed.metadata.optimized_height <= 1568);
         assert!(
@@ -259,27 +231,27 @@ mod tests {
     #[test]
     fn process_image_bytes_small_image_not_upscaled() {
         let png = create_test_png(50, 30);
-        let processed = process_image_bytes(&png, LlmProvider::Claude).unwrap();
+        let processed = process_image_bytes(&png).unwrap();
         assert_eq!(processed.metadata.optimized_width, 50);
         assert_eq!(processed.metadata.optimized_height, 30);
     }
 
     #[test]
     fn process_image_bytes_invalid_data() {
-        let result = process_image_bytes(&[0, 1, 2, 3], LlmProvider::Claude);
+        let result = process_image_bytes(&[0, 1, 2, 3]);
         assert!(matches!(result, Err(CaptureFlowError::DecodeImage(_))));
     }
 
     #[test]
     fn process_image_bytes_empty_data() {
-        let result = process_image_bytes(&[], LlmProvider::Claude);
+        let result = process_image_bytes(&[]);
         assert!(result.is_err());
     }
 
     #[test]
     fn process_image_bytes_base64_is_valid() {
         let png = create_test_png(100, 100);
-        let processed = process_image_bytes(&png, LlmProvider::Claude).unwrap();
+        let processed = process_image_bytes(&png).unwrap();
         let decoded = base64::engine::general_purpose::STANDARD
             .decode(&processed.metadata.image_base64)
             .unwrap();
@@ -289,32 +261,23 @@ mod tests {
     #[test]
     fn process_image_bytes_metadata_has_timestamp() {
         let png = create_test_png(100, 100);
-        let processed = process_image_bytes(&png, LlmProvider::Claude).unwrap();
+        let processed = process_image_bytes(&png).unwrap();
         assert!(processed.metadata.timestamp.contains('T'));
     }
 
     #[test]
-    fn process_rgba_capture_supports_all_providers() {
+    fn process_rgba_capture_produces_valid_output() {
         let rgba = vec![128u8; 200 * 150 * 4];
-        for provider in [LlmProvider::Claude, LlmProvider::Gpt4o, LlmProvider::Gemini] {
-            let processed = process_rgba_capture(&rgba, 200, 150, provider).unwrap();
-            assert!(processed.metadata.optimized_width > 0);
-            assert!(processed.metadata.optimized_height > 0);
-            assert!(processed.metadata.token_estimate > 0);
-        }
+        let processed = process_rgba_capture(&rgba, 200, 150).unwrap();
+        assert!(processed.metadata.optimized_width > 0);
+        assert!(processed.metadata.optimized_height > 0);
     }
 
     #[test]
     fn process_rgba_capture_raw_preserves_dimensions_and_encodes_png() {
         let rgba = vec![255u8; 25 * 10 * 4];
-        let processed = process_rgba_capture_with_mode(
-            &rgba,
-            25,
-            10,
-            LlmProvider::Claude,
-            CaptureProcessingMode::Raw,
-        )
-        .unwrap();
+        let processed =
+            process_rgba_capture_with_mode(&rgba, 25, 10, CaptureProcessingMode::Raw).unwrap();
 
         assert_eq!(processed.metadata.original_width, 25);
         assert_eq!(processed.metadata.optimized_width, 25);
@@ -324,13 +287,7 @@ mod tests {
 
     #[test]
     fn process_rgba_capture_invalid_dimensions_fail() {
-        let result = process_rgba_capture_with_mode(
-            &[0u8; 10],
-            10,
-            10,
-            LlmProvider::Claude,
-            CaptureProcessingMode::Raw,
-        );
+        let result = process_rgba_capture_with_mode(&[0u8; 10], 10, 10, CaptureProcessingMode::Raw);
 
         assert!(matches!(
             result,

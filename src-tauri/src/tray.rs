@@ -144,14 +144,8 @@ pub fn trigger_area_capture(app: &AppHandle) {
         return;
     }
 
-    let state = app.state::<AppState>();
-    let provider = *state.default_provider.read().unwrap_or_else(|e| {
-        tracing::warn!("Provider lock poisoned, using default: {e}");
-        e.into_inner()
-    });
-
     let app_handle = app.clone();
-    std::thread::spawn(move || match capture_flow::execute_area_capture(provider) {
+    std::thread::spawn(move || match capture_flow::execute_area_capture() {
         Ok(Some(metadata)) => {
             show_preview_on_main_thread(&app_handle, metadata);
         }
@@ -170,26 +164,18 @@ pub fn trigger_window_capture(app: &AppHandle) {
         return;
     }
 
-    let state = app.state::<AppState>();
-    let provider = *state.default_provider.read().unwrap_or_else(|e| {
-        tracing::warn!("Provider lock poisoned, using default: {e}");
-        e.into_inner()
-    });
-
     let app_handle = app.clone();
-    std::thread::spawn(
-        move || match capture_flow::execute_window_capture(provider) {
-            Ok(Some(metadata)) => {
-                show_preview_on_main_thread(&app_handle, metadata);
-            }
-            Ok(None) => {
-                tracing::info!("Window capture cancelled by user");
-            }
-            Err(e) => {
-                tracing::error!("Window capture failed: {e}");
-            }
-        },
-    );
+    std::thread::spawn(move || match capture_flow::execute_window_capture() {
+        Ok(Some(metadata)) => {
+            show_preview_on_main_thread(&app_handle, metadata);
+        }
+        Ok(None) => {
+            tracing::info!("Window capture cancelled by user");
+        }
+        Err(e) => {
+            tracing::error!("Window capture failed: {e}");
+        }
+    });
 }
 
 /// Trigger fullscreen capture. Runs in a background thread for consistency.
@@ -198,26 +184,18 @@ pub fn trigger_fullscreen_capture(app: &AppHandle) {
         return;
     }
 
-    let state = app.state::<AppState>();
-    let provider = *state.default_provider.read().unwrap_or_else(|e| {
-        tracing::warn!("Provider lock poisoned, using default: {e}");
-        e.into_inner()
-    });
-
     let app_handle = app.clone();
-    std::thread::spawn(
-        move || match capture_flow::execute_fullscreen_capture(provider) {
-            Ok(Some(metadata)) => {
-                show_preview_on_main_thread(&app_handle, metadata);
-            }
-            Ok(None) => {
-                tracing::error!("Fullscreen capture produced no output");
-            }
-            Err(e) => {
-                tracing::error!("Fullscreen capture failed: {e}");
-            }
-        },
-    );
+    std::thread::spawn(move || match capture_flow::execute_fullscreen_capture() {
+        Ok(Some(metadata)) => {
+            show_preview_on_main_thread(&app_handle, metadata);
+        }
+        Ok(None) => {
+            tracing::error!("Fullscreen capture produced no output");
+        }
+        Err(e) => {
+            tracing::error!("Fullscreen capture failed: {e}");
+        }
+    });
 }
 
 /// Play a macOS system sound for audio feedback.
@@ -291,8 +269,6 @@ pub fn toggle_gif_recording(app: &AppHandle) {
                             optimized_width: result.width,
                             optimized_height: result.height,
                             file_size: result.file_size as usize,
-                            token_estimate: 0,
-                            provider: String::new(),
                             timestamp: chrono::Local::now().to_rfc3339(),
                             image_base64: String::new(),
                             gif_base64,

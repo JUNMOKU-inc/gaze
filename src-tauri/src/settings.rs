@@ -65,31 +65,6 @@ pub fn apply_launch_at_login(_enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// Parse a `default_provider` string into `LlmProvider`, or return a descriptive error.
-fn parse_provider(s: &str) -> Result<snapforge_pipeline::LlmProvider, String> {
-    serde_json::from_value::<snapforge_pipeline::LlmProvider>(serde_json::Value::String(
-        s.to_string(),
-    ))
-    .map_err(|e| format!("invalid default_provider '{s}': {e}"))
-}
-
-/// Write the provider into AppState. Recovers from a poisoned lock rather than panicking.
-pub fn sync_provider_to_state(app: &AppHandle, provider_str: &str) {
-    let Ok(provider) = parse_provider(provider_str) else {
-        tracing::warn!(
-            value = provider_str,
-            "default_provider in settings.json is unrecognised; keeping current AppState value"
-        );
-        return;
-    };
-    let state = app.state::<crate::state::AppState>();
-    let mut guard = state
-        .default_provider
-        .write()
-        .unwrap_or_else(|e| e.into_inner());
-    *guard = provider;
-}
-
 #[tauri::command]
 pub fn get_settings(app: AppHandle) -> Settings {
     load_settings(&app)
@@ -103,17 +78,11 @@ pub fn update_settings(app: AppHandle, settings: Settings) -> Result<(), String>
     let state = app.state::<crate::state::AppState>();
     let _guard = state.settings_mu.lock().unwrap_or_else(|e| e.into_inner());
 
-    // Validate at the boundary so invalid values never reach disk or AppState.
-    parse_provider(&settings.default_provider)?;
-
     let old_settings = load_settings(&app);
 
-    // Persist first: if the disk write fails, AppState and the OS state stay
-    // consistent with what the user sees on next restart.
+    // Persist first: if the disk write fails, OS state stays consistent with
+    // what the user sees on next restart.
     save_settings(&app, &settings)?;
-
-    // Commit to in-memory state only after disk succeeded.
-    sync_provider_to_state(&app, &settings.default_provider);
 
     // Apply launch-at-login change last, and surface failure to the caller so
     // the frontend can alert the user instead of silently diverging.

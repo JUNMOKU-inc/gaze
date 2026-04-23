@@ -149,6 +149,8 @@ Options:
   -o, --output <PATH>        ファイル出力先 (省略時はstdoutにJSON)
       --copy                 クリップボードにもコピー
       --raw                  最適化せず生画像を出力
+      --pin <X,Y[:NOTE]>     絶対ピクセル指定で Pin を追加（複数指定可）
+      --rect <X,Y,W,H[:NOTE]> 絶対ピクセル指定で Rectangle を追加（複数指定可）
   -f, --format <FORMAT>      出力フォーマット [default: json]
                              json    = メタデータ + base64画像
                              path    = ファイルパスのみ (--output と併用)
@@ -179,6 +181,11 @@ gaze optimize screenshot.png --provider claude -o optimized.webp
 
 # クリップボードにもコピー (GUI と同じ動作)
 gaze capture --copy
+
+# 注目点を指定して promptHint 付き JSON を得る
+gaze optimize screenshot.png \
+  --pin 640,320:broken button \
+  --rect 120,90,420,180:spacing issue
 ```
 
 ### 3.4 JSON 出力フォーマット
@@ -194,12 +201,17 @@ gaze capture --copy
   "provider": "Claude",
   "timestamp": "2026-03-29T21:30:00+09:00",
   "imageBase64": "UklGR...",
-  "outputPath": null
+  "outputPath": null,
+  "promptHint": "Focus on the marked regions in the attached screenshot:\n- Pin 1 ...",
+  "annotations": [
+    { "id": "1", "kind": { "type": "pin", "x": 0.5, "y": 0.4 }, "note": "broken button" }
+  ]
 }
 ```
 
 `CaptureMetadata` と同じ構造。`--output` 指定時は `outputPath` にパスが入り、
 `imageBase64` は省略 (ファイルに書き込み済みのため、stdout を軽く保つ)。
+注釈を付けた場合は `promptHint` と `annotations` が追加される。
 
 ### 3.5 終了コード
 

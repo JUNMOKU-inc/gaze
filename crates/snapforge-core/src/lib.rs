@@ -1,7 +1,13 @@
+mod annotation;
 mod capture;
 mod output;
 mod settings;
 
+pub use annotation::{
+    apply_annotations_to_processed_capture, build_llm_prompt_hint,
+    build_llm_prompt_hint_for_language, render_annotations_to_png, AnnotatedImage, Annotation,
+    AnnotationKind,
+};
 pub use capture::{
     process_image_bytes, process_image_bytes_with_mode, process_rgba_capture,
     process_rgba_capture_with_mode, temp_capture_path, CaptureMetadata, CaptureProcessingMode,

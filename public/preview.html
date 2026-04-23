@@ -32,21 +32,42 @@ body {
     cursor: pointer;
     height: 90px;
     overflow: hidden;
+    background: rgba(0,0,0,0.28);
+}
+.thumb-area.editing {
+    touch-action: none;
 }
 .thumb-area img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    pointer-events: none;
+    -webkit-user-drag: none;
 }
+.annotation-layer,
+.draft-layer,
+.editor-chrome,
 .hover-overlay {
     position: absolute;
     inset: 0;
+}
+.annotation-layer,
+.draft-layer,
+.editor-chrome {
+    pointer-events: none;
+}
+.annotation-layer.visible,
+.draft-layer.visible,
+.editor-chrome.visible {
+    display: block;
+}
+.hover-overlay {
     background: rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 14px;
     opacity: 0;
     transition: opacity 200ms;
     pointer-events: none;
@@ -54,6 +75,10 @@ body {
 .thumb-area:hover .hover-overlay {
     opacity: 1;
     pointer-events: auto;
+}
+.thumb-area.editing .hover-overlay {
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 .action-icon {
     display: flex;
@@ -64,6 +89,7 @@ body {
     border: none;
     cursor: pointer;
     padding: 0;
+    color: inherit;
 }
 .action-icon .circle {
     width: 40px;
@@ -80,21 +106,18 @@ body {
 .action-icon:hover .circle {
     background: rgba(255,255,255,0.2);
     color: white;
-    transform: scale(1.1);
+    transform: scale(1.08);
 }
 .action-icon .label {
     font-size: 10px;
     font-weight: 500;
-    color: rgba(255,255,255,0.6);
-}
-.action-icon:hover .label {
-    color: rgba(255,255,255,0.9);
+    color: rgba(255,255,255,0.66);
 }
 .close-btn {
     position: absolute;
     top: 8px;
     right: 8px;
-    z-index: 10;
+    z-index: 20;
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -128,10 +151,147 @@ body {
 .meta {
     margin-top: 4px;
     font-size: 11px;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.44);
     line-height: 1.4;
 }
 .meta .sep { margin: 0 6px; }
+.editor-chrome {
+    display: none;
+    padding: 12px;
+}
+.editor-surface {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+.toolbar {
+    pointer-events: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.tool-btn,
+.prompt-btn {
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: rgba(17,24,39,0.82);
+    color: rgba(255,255,255,0.88);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+}
+.tool-btn.active {
+    background: rgba(255,95,86,0.94);
+    border-color: rgba(255,95,86,0.94);
+    color: white;
+}
+.tool-btn.secondary {
+    background: rgba(255,255,255,0.08);
+}
+.note-input {
+    pointer-events: auto;
+    min-width: 220px;
+    flex: 1 1 220px;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px;
+    background: rgba(17,24,39,0.88);
+    color: rgba(255,255,255,0.94);
+    padding: 8px 10px;
+    font-size: 12px;
+    outline: none;
+}
+.prompt-panel {
+    pointer-events: auto;
+    align-self: flex-start;
+    max-width: min(520px, 80%);
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(15,23,42,0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+.prompt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.prompt-title {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.64);
+}
+.prompt-text {
+    white-space: pre-wrap;
+    font-size: 12px;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.9);
+}
+.pin-marker {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    margin-left: -12px;
+    margin-top: -12px;
+    border-radius: 50%;
+    background: #ff5f56;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(255,95,86,0.45);
+}
+.pin-marker::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -12px;
+    width: 2px;
+    height: 12px;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.92);
+}
+.marker-note {
+    position: absolute;
+    top: -6px;
+    left: 28px;
+    white-space: nowrap;
+    padding: 4px 7px;
+    border-radius: 999px;
+    background: rgba(17,24,39,0.92);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.9);
+    font-size: 11px;
+    font-weight: 500;
+}
+.rect-marker {
+    position: absolute;
+    border: 3px solid #ffb347;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.15);
+}
+.rect-label {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 7px;
+    border-radius: 999px;
+    background: rgba(17,24,39,0.94);
+    color: rgba(255,255,255,0.96);
+    font-size: 11px;
+    font-weight: 700;
+}
+.draft-rect {
+    position: absolute;
+    border: 2px dashed rgba(255,255,255,0.9);
+    background: rgba(255,179,71,0.12);
+}
 </style>
 </head>
 <body>
@@ -144,6 +304,27 @@ body {
 
     <div class="thumb-area" id="thumb-area">
         <img id="preview-img" src="" alt="Preview"/>
+        <div class="annotation-layer" id="annotation-layer"></div>
+        <div class="draft-layer" id="draft-layer"></div>
+        <div class="editor-chrome" id="editor-chrome">
+            <div class="editor-surface">
+                <div class="toolbar">
+                    <button class="tool-btn active" id="tool-pin"><span id="label-tool-pin">Pin</span></button>
+                    <button class="tool-btn" id="tool-rect"><span id="label-tool-rect">Rect</span></button>
+                    <button class="tool-btn secondary" id="tool-undo"><span id="label-tool-undo">Undo</span></button>
+                    <button class="tool-btn secondary" id="tool-clear"><span id="label-tool-clear">Clear</span></button>
+                    <button class="prompt-btn" id="tool-copy-llm"><span id="label-tool-copy-llm">Copy for LLM</span></button>
+                    <input class="note-input" id="note-input" type="text" maxlength="120" placeholder="Optional note for the next marker"/>
+                </div>
+                <div class="prompt-panel" id="prompt-panel">
+                    <div class="prompt-head">
+                        <div class="prompt-title" id="label-prompt-title">LLM Prompt Hint</div>
+                        <button class="prompt-btn" id="tool-copy-prompt"><span id="label-tool-copy-prompt">Copy Prompt</span></button>
+                    </div>
+                    <div class="prompt-text" id="prompt-text">Add a pin or rectangle to generate a prompt hint.</div>
+                </div>
+            </div>
+        </div>
         <div class="hover-overlay">
             <button class="action-icon" id="btn-copy">
                 <div class="circle">
@@ -152,7 +333,16 @@ body {
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                     </svg>
                 </div>
-                <span class="label">Copy</span>
+                <span class="label" id="label-action-copy">Copy</span>
+            </button>
+            <button class="action-icon" id="btn-annotate">
+                <div class="circle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                    </svg>
+                </div>
+                <span class="label" id="label-action-annotate">Annotate</span>
             </button>
             <button class="action-icon" id="btn-save">
                 <div class="circle">
@@ -162,7 +352,7 @@ body {
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
                 </div>
-                <span class="label">Save</span>
+                <span class="label" id="label-action-save">Save</span>
             </button>
         </div>
     </div>
@@ -179,7 +369,183 @@ body {
 </div>
 
 <script>
-// Wait for data injected by Tauri initialization_script
+var previewI18n = {
+    en: {
+        toolPin: 'Pin',
+        toolRect: 'Rect',
+        toolUndo: 'Undo',
+        toolClear: 'Clear',
+        toolCopyForLlm: 'Copy for LLM',
+        toolCopyPrompt: 'Copy Prompt',
+        actionCopy: 'Copy',
+        actionAnnotate: 'Annotate',
+        actionSave: 'Save',
+        promptTitle: 'LLM Prompt Hint',
+        notePlaceholder: 'Optional note for the next marker',
+        promptEmpty: 'Add a pin or rectangle to generate a prompt hint.',
+        promptIntro: 'Focus on the marked regions in the attached screenshot:',
+        toastCopied: 'Copied to clipboard',
+        toastGifCopied: 'GIF copied',
+        toastAnnotatedCopied: 'Annotated image copied',
+        toastCopiedWithPrompt: 'Copied image + prompt',
+        toastCopiedImageOnly: 'Copied image; prompt ready below',
+        toastPromptCopied: 'Prompt copied',
+        toastAddMarkerFirst: 'Add a marker first',
+        toastAnnotateReady: 'Annotate mode ready',
+        toastSaved: 'Saved ',
+        toastErrorPrefix: 'Error: ',
+        toastErrorShortPrefix: 'ERR: ',
+        metaFrames: 'frames',
+        defaultPinNote: 'inspect this point closely',
+        defaultRectNote: 'review the contents inside this region'
+    },
+    ja: {
+        toolPin: 'ピン',
+        toolRect: '矩形',
+        toolUndo: '戻す',
+        toolClear: 'クリア',
+        toolCopyForLlm: 'LLM用コピー',
+        toolCopyPrompt: 'プロンプトをコピー',
+        actionCopy: 'コピー',
+        actionAnnotate: '注釈',
+        actionSave: '保存',
+        promptTitle: 'LLMプロンプト補助',
+        notePlaceholder: '次のマーカー用メモを入力',
+        promptEmpty: 'ピンまたは矩形を追加すると、プロンプト補助文を生成します。',
+        promptIntro: '添付したスクリーンショットでは、次のマーカーに注目してください:',
+        toastCopied: 'クリップボードにコピーしました',
+        toastGifCopied: 'GIFをコピーしました',
+        toastAnnotatedCopied: '注釈入り画像をコピーしました',
+        toastCopiedWithPrompt: '画像とプロンプトをコピーしました',
+        toastCopiedImageOnly: '画像をコピーしました。下のプロンプトを使えます',
+        toastPromptCopied: 'プロンプトをコピーしました',
+        toastAddMarkerFirst: '先にマーカーを追加してください',
+        toastAnnotateReady: '注釈モードを開きました',
+        toastSaved: '保存しました: ',
+        toastErrorPrefix: 'エラー: ',
+        toastErrorShortPrefix: 'ERR: ',
+        metaFrames: 'フレーム',
+        defaultPinNote: 'このポイントを重点的に確認してください',
+        defaultRectNote: 'この範囲の内容を確認してください'
+    },
+    zh: {
+        toolPin: '标记点',
+        toolRect: '矩形',
+        toolUndo: '撤销',
+        toolClear: '清除',
+        toolCopyForLlm: '复制给 LLM',
+        toolCopyPrompt: '复制提示词',
+        actionCopy: '复制',
+        actionAnnotate: '标注',
+        actionSave: '保存',
+        promptTitle: 'LLM 提示词辅助',
+        notePlaceholder: '为下一个标记添加备注（可选）',
+        promptEmpty: '添加标记点或矩形后，将生成提示词辅助文本。',
+        promptIntro: '请重点查看附带截图中的以下标记区域：',
+        toastCopied: '已复制到剪贴板',
+        toastGifCopied: 'GIF 已复制',
+        toastAnnotatedCopied: '已复制带标注的图片',
+        toastCopiedWithPrompt: '已复制图片和提示词',
+        toastCopiedImageOnly: '已复制图片；可使用下方提示词',
+        toastPromptCopied: '提示词已复制',
+        toastAddMarkerFirst: '请先添加标记',
+        toastAnnotateReady: '标注模式已开启',
+        toastSaved: '已保存: ',
+        toastErrorPrefix: '错误: ',
+        toastErrorShortPrefix: 'ERR: ',
+        metaFrames: '帧',
+        defaultPinNote: '请重点查看这个点',
+        defaultRectNote: '请查看这个区域中的内容'
+    },
+    ko: {
+        toolPin: '핀',
+        toolRect: '사각형',
+        toolUndo: '되돌리기',
+        toolClear: '지우기',
+        toolCopyForLlm: 'LLM용 복사',
+        toolCopyPrompt: '프롬프트 복사',
+        actionCopy: '복사',
+        actionAnnotate: '주석',
+        actionSave: '저장',
+        promptTitle: 'LLM 프롬프트 힌트',
+        notePlaceholder: '다음 마커에 대한 메모(선택)',
+        promptEmpty: '핀 또는 사각형을 추가하면 프롬프트 힌트가 생성됩니다.',
+        promptIntro: '첨부된 스크린샷에서 다음 표시 영역을 중점적으로 봐 주세요:',
+        toastCopied: '클립보드에 복사했습니다',
+        toastGifCopied: 'GIF를 복사했습니다',
+        toastAnnotatedCopied: '주석이 포함된 이미지를 복사했습니다',
+        toastCopiedWithPrompt: '이미지와 프롬프트를 복사했습니다',
+        toastCopiedImageOnly: '이미지를 복사했습니다. 아래 프롬프트를 사용할 수 있습니다',
+        toastPromptCopied: '프롬프트를 복사했습니다',
+        toastAddMarkerFirst: '먼저 마커를 추가해 주세요',
+        toastAnnotateReady: '주석 모드를 열었습니다',
+        toastSaved: '저장됨: ',
+        toastErrorPrefix: '오류: ',
+        toastErrorShortPrefix: 'ERR: ',
+        metaFrames: '프레임',
+        defaultPinNote: '이 지점을 자세히 확인해 주세요',
+        defaultRectNote: '이 영역의 내용을 확인해 주세요'
+    },
+    de: {
+        toolPin: 'Pin',
+        toolRect: 'Rechteck',
+        toolUndo: 'Rückgängig',
+        toolClear: 'Leeren',
+        toolCopyForLlm: 'Für LLM kopieren',
+        toolCopyPrompt: 'Prompt kopieren',
+        actionCopy: 'Kopieren',
+        actionAnnotate: 'Annotieren',
+        actionSave: 'Speichern',
+        promptTitle: 'LLM Prompt-Hinweis',
+        notePlaceholder: 'Optionale Notiz für die nächste Markierung',
+        promptEmpty: 'Füge einen Pin oder ein Rechteck hinzu, um einen Prompt-Hinweis zu erzeugen.',
+        promptIntro: 'Bitte konzentriere dich im angehängten Screenshot auf die folgenden Markierungen:',
+        toastCopied: 'In die Zwischenablage kopiert',
+        toastGifCopied: 'GIF kopiert',
+        toastAnnotatedCopied: 'Annotiertes Bild kopiert',
+        toastCopiedWithPrompt: 'Bild + Prompt kopiert',
+        toastCopiedImageOnly: 'Bild kopiert; Prompt ist unten bereit',
+        toastPromptCopied: 'Prompt kopiert',
+        toastAddMarkerFirst: 'Füge zuerst eine Markierung hinzu',
+        toastAnnotateReady: 'Annotierungsmodus ist bereit',
+        toastSaved: 'Gespeichert: ',
+        toastErrorPrefix: 'Fehler: ',
+        toastErrorShortPrefix: 'ERR: ',
+        metaFrames: 'Frames',
+        defaultPinNote: 'prüfe diesen Punkt genau',
+        defaultRectNote: 'prüfe den Inhalt in diesem Bereich'
+    },
+    es: {
+        toolPin: 'Pin',
+        toolRect: 'Rectángulo',
+        toolUndo: 'Deshacer',
+        toolClear: 'Limpiar',
+        toolCopyForLlm: 'Copiar para LLM',
+        toolCopyPrompt: 'Copiar prompt',
+        actionCopy: 'Copiar',
+        actionAnnotate: 'Anotar',
+        actionSave: 'Guardar',
+        promptTitle: 'Ayuda de prompt para LLM',
+        notePlaceholder: 'Nota opcional para el siguiente marcador',
+        promptEmpty: 'Agrega un pin o rectángulo para generar una ayuda de prompt.',
+        promptIntro: 'Concéntrate en las siguientes marcas de la captura adjunta:',
+        toastCopied: 'Copiado al portapapeles',
+        toastGifCopied: 'GIF copiado',
+        toastAnnotatedCopied: 'Imagen anotada copiada',
+        toastCopiedWithPrompt: 'Imagen + prompt copiados',
+        toastCopiedImageOnly: 'Imagen copiada; prompt disponible abajo',
+        toastPromptCopied: 'Prompt copiado',
+        toastAddMarkerFirst: 'Agrega primero un marcador',
+        toastAnnotateReady: 'Modo de anotación listo',
+        toastSaved: 'Guardado: ',
+        toastErrorPrefix: 'Error: ',
+        toastErrorShortPrefix: 'ERR: ',
+        metaFrames: 'fotogramas',
+        defaultPinNote: 'revisa este punto con detalle',
+        defaultRectNote: 'revisa el contenido dentro de esta región'
+    }
+};
+
 function boot(attempt) {
     if (!window.__GAZE_DATA__ || !window.__TAURI__ || !window.__TAURI__.core) {
         if (attempt < 200) {
@@ -192,16 +558,25 @@ function boot(attempt) {
     var LABEL = window.__GAZE_LABEL__;
     var invoke = window.__TAURI__.core.invoke;
     var isGif = data.mediaType === 'gif';
+    var popup = document.getElementById('popup');
+    var thumbArea = document.getElementById('thumb-area');
+    var previewImg = document.getElementById('preview-img');
+    var annotationLayer = document.getElementById('annotation-layer');
+    var draftLayer = document.getElementById('draft-layer');
+    var editorChrome = document.getElementById('editor-chrome');
+    var promptTextEl = document.getElementById('prompt-text');
+    var noteInput = document.getElementById('note-input');
+    var toastText = document.getElementById('toast-text');
+    var toastEl = document.getElementById('toast');
 
-    // Hydrate the page with capture data
     if (isGif) {
-        document.getElementById('preview-img').src = 'data:image/gif;base64,' + data.gifBase64;
+        previewImg.src = 'data:image/gif;base64,' + data.gifBase64;
     } else {
         var mime = data.imageBase64.indexOf('UklGR') === 0 ? 'image/webp' : 'image/png';
-        document.getElementById('preview-img').src = 'data:' + mime + ';base64,' + data.imageBase64;
+        previewImg.src = 'data:' + mime + ';base64,' + data.imageBase64;
     }
+    previewImg.draggable = false;
 
-    // Format helpers
     function fmtSize(bytes) {
         if (bytes < 1024) return bytes + ' B';
         var kb = bytes / 1024;
@@ -215,7 +590,7 @@ function boot(attempt) {
     function fmtDuration(secs) {
         var s = Math.round(secs);
         if (s < 60) return s + 's';
-        return Math.floor(s/60) + 'm ' + (s%60) + 's';
+        return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
     }
 
     var sep = '<span class="sep">\u00b7</span>';
@@ -223,7 +598,7 @@ function boot(attempt) {
         document.getElementById('meta').innerHTML =
             data.optimizedWidth + '\u00d7' + data.optimizedHeight + sep +
             fmtSize(data.fileSize) + sep +
-            data.frameCount + ' frames' + sep +
+            data.frameCount + ' ' + t('metaFrames') + sep +
             fmtDuration(data.durationSecs);
     } else {
         document.getElementById('meta').innerHTML =
@@ -233,71 +608,564 @@ function boot(attempt) {
             data.provider;
     }
 
-    // Set initial toast text based on media type
-    if (isGif) {
-        document.getElementById('toast-text').textContent = 'GIF copied';
-    }
+    invoke('get_settings')
+        .then(function(settings) {
+            currentLanguage = ((settings && settings.language) || 'en').split(/[-_]/)[0];
+            applyLanguage();
+            renderPromptPreview();
+        })
+        .catch(function() {
+            currentLanguage = 'en';
+            applyLanguage();
+        });
 
-    // State
     var COLLAPSED_WIDTH = 260;
     var COLLAPSED_HEIGHT = 190;
     var THUMB_HEIGHT = 90;
-    var INFO_HEIGHT = 60;
+    var BASE_INFO_HEIGHT = 60;
+    var EDIT_PANEL_HEIGHT = 120;
     var isExpanded = false;
     var isAnimating = false;
+    var activeTool = 'pin';
+    var annotations = [];
+    var pinCount = 0;
+    var rectCount = 0;
+    var draftRect = null;
+    var draftRectEl = null;
+    var draftPointerId = null;
+    var draftDisplayRect = null;
+    var draftFramePending = false;
+    var lastPreparedBundle = null;
+    var autoCopyTimer = null;
+    var currentLanguage = 'en';
 
-    function showToast(msg) {
-        var el = document.getElementById('toast-text');
-        var container = document.getElementById('toast');
-        el.textContent = msg;
-        container.style.opacity = '1';
-        setTimeout(function() { container.style.opacity = '0.5'; }, 2000);
+    function t(key) {
+        return (previewI18n[currentLanguage] && previewI18n[currentLanguage][key]) ||
+            previewI18n.en[key] ||
+            key;
+    }
+
+    function applyLanguage() {
+        document.getElementById('label-tool-pin').textContent = t('toolPin');
+        document.getElementById('label-tool-rect').textContent = t('toolRect');
+        document.getElementById('label-tool-undo').textContent = t('toolUndo');
+        document.getElementById('label-tool-clear').textContent = t('toolClear');
+        document.getElementById('label-tool-copy-llm').textContent = t('toolCopyForLlm');
+        document.getElementById('label-tool-copy-prompt').textContent = t('toolCopyPrompt');
+        document.getElementById('label-action-copy').textContent = t('actionCopy');
+        document.getElementById('label-action-annotate').textContent = t('actionAnnotate');
+        document.getElementById('label-action-save').textContent = t('actionSave');
+        document.getElementById('label-prompt-title').textContent = t('promptTitle');
+        noteInput.placeholder = t('notePlaceholder');
+        if (!annotations.length) {
+            promptTextEl.textContent = t('promptEmpty');
+        }
+        toastText.textContent = isGif ? t('toastGifCopied') : t('toastCopied');
+    }
+
+    function showToast(message) {
+        toastText.textContent = message;
+        toastEl.style.opacity = '1';
+        setTimeout(function() {
+            toastEl.style.opacity = '0.5';
+        }, 2200);
+    }
+
+    function showError(error) {
+        showToast(t('toastErrorPrefix') + error);
+    }
+
+    function showSystemError(error) {
+        showToast(t('toastErrorShortPrefix') + error);
     }
 
     function dismissPreview() {
-        document.getElementById('popup').style.opacity = '0';
+        popup.style.opacity = '0';
         setTimeout(function() {
             invoke('close_preview_by_label', { label: LABEL });
         }, 200);
     }
 
-    function copyCapture() {
-        var b64 = isGif ? data.gifBase64 : data.imageBase64;
-        invoke('copy_image_from_base64', { imageBase64: b64 })
-            .then(function() { showToast(isGif ? 'GIF copied' : 'Copied to clipboard'); })
-            .catch(function(e) { showToast('Error: ' + e); });
+    function imageMetrics() {
+        return {
+            width: data.optimizedWidth || data.originalWidth,
+            height: data.optimizedHeight || data.originalHeight
+        };
     }
 
-    function saveCapture() {
+    function getDisplayedImageRect(bounds) {
+        bounds = bounds || thumbArea.getBoundingClientRect();
+        var metrics = imageMetrics();
+        var scale = Math.min(bounds.width / metrics.width, bounds.height / metrics.height);
+        var dispW = metrics.width * scale;
+        var dispH = metrics.height * scale;
+        return {
+            left: (bounds.width - dispW) / 2,
+            top: (bounds.height - dispH) / 2,
+            width: dispW,
+            height: dispH
+        };
+    }
+
+    function pointToNormalized(clientX, clientY, options) {
+        options = options || {};
+        var bounds = options.bounds || thumbArea.getBoundingClientRect();
+        var rect = options.rect || getDisplayedImageRect(bounds);
+        var localX = clientX - bounds.left - rect.left;
+        var localY = clientY - bounds.top - rect.top;
+        if (!options.clamp && (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height)) {
+            return null;
+        }
+        return {
+            x: Math.max(0, Math.min(1, localX / rect.width)),
+            y: Math.max(0, Math.min(1, localY / rect.height))
+        };
+    }
+
+    function alphaId(index) {
+        var value = index;
+        var out = '';
+        while (true) {
+            var rem = value % 26;
+            out = String.fromCharCode(65 + rem) + out;
+            if (value < 26) break;
+            value = Math.floor(value / 26) - 1;
+        }
+        return out;
+    }
+
+    function regionLabel(x, y) {
+        var vertical = y < 1 / 3 ? 'upper' : (y < 2 / 3 ? 'center' : 'lower');
+        var horizontal = x < 1 / 3 ? 'left' : (x < 2 / 3 ? 'center' : 'right');
+        if (currentLanguage === 'ja') {
+            if (vertical === 'center' && horizontal === 'center') return '中央';
+            if (vertical === 'center') return horizontal === 'left' ? '中央左' : '中央右';
+            if (horizontal === 'center') return vertical === 'upper' ? '上中央' : '下中央';
+            return (horizontal === 'left' ? '左' : '右') + (vertical === 'upper' ? '上' : '下');
+        }
+        if (currentLanguage === 'zh') {
+            if (vertical === 'center' && horizontal === 'center') return '中央';
+            if (vertical === 'center') return horizontal === 'left' ? '中左' : '中右';
+            if (horizontal === 'center') return vertical === 'upper' ? '上中' : '下中';
+            return (horizontal === 'left' ? '左' : '右') + (vertical === 'upper' ? '上' : '下');
+        }
+        if (currentLanguage === 'ko') {
+            if (vertical === 'center' && horizontal === 'center') return '중앙';
+            if (vertical === 'center') return horizontal === 'left' ? '중앙 왼쪽' : '중앙 오른쪽';
+            if (horizontal === 'center') return vertical === 'upper' ? '상단 중앙' : '하단 중앙';
+            return (horizontal === 'left' ? '왼쪽' : '오른쪽') + (vertical === 'upper' ? ' 상단' : ' 하단');
+        }
+        if (currentLanguage === 'de') {
+            if (vertical === 'center' && horizontal === 'center') return 'Mitte';
+            if (vertical === 'center') return horizontal === 'left' ? 'mittig links' : 'mittig rechts';
+            if (horizontal === 'center') return vertical === 'upper' ? 'oben mittig' : 'unten mittig';
+            return (vertical === 'upper' ? 'oben ' : 'unten ') + (horizontal === 'left' ? 'links' : 'rechts');
+        }
+        if (currentLanguage === 'es') {
+            if (vertical === 'center' && horizontal === 'center') return 'centro';
+            if (vertical === 'center') return horizontal === 'left' ? 'centro-izquierda' : 'centro-derecha';
+            if (horizontal === 'center') return vertical === 'upper' ? 'parte superior central' : 'parte inferior central';
+            return (vertical === 'upper' ? 'superior ' : 'inferior ') + (horizontal === 'left' ? 'izquierda' : 'derecha');
+        }
+        if (vertical === 'center' && horizontal === 'center') return 'center';
+        if (vertical === 'center') return 'center-' + horizontal;
+        if (horizontal === 'center') return vertical + '-center';
+        return vertical + '-' + horizontal;
+    }
+
+    function buildPromptHint() {
+        if (!annotations.length) {
+            return t('promptEmpty');
+        }
+        var lines = [t('promptIntro')];
+        annotations.forEach(function(annotation) {
+            if (annotation.kind.type === 'pin') {
+                var x = Math.round(annotation.kind.x * 100);
+                var y = Math.round(annotation.kind.y * 100);
+                if (currentLanguage === 'ja') {
+                    lines.push(
+                        '- Pin ' + annotation.id + ' は ' + regionLabel(annotation.kind.x, annotation.kind.y) +
+                        ' にあります（左から ' + x + '%、上から ' + y + '%）。' +
+                        (annotation.note || t('defaultPinNote')) + '。'
+                    );
+                } else if (currentLanguage === 'zh') {
+                    lines.push(
+                        '- Pin ' + annotation.id + ' 位于' + regionLabel(annotation.kind.x, annotation.kind.y) +
+                        '（距左侧 ' + x + '%，距顶部 ' + y + '%）：' +
+                        (annotation.note || t('defaultPinNote')) + '。'
+                    );
+                } else if (currentLanguage === 'ko') {
+                    lines.push(
+                        '- Pin ' + annotation.id + ' 는 ' + regionLabel(annotation.kind.x, annotation.kind.y) +
+                        '에 있습니다 (왼쪽에서 ' + x + '%, 위에서 ' + y + '%). ' +
+                        (annotation.note || t('defaultPinNote')) + '.'
+                    );
+                } else if (currentLanguage === 'de') {
+                    lines.push(
+                        '- Pin ' + annotation.id + ' befindet sich bei ' + regionLabel(annotation.kind.x, annotation.kind.y) +
+                        ' (' + x + '% von links, ' + y + '% von oben): ' +
+                        (annotation.note || t('defaultPinNote')) + '.'
+                    );
+                } else if (currentLanguage === 'es') {
+                    lines.push(
+                        '- El pin ' + annotation.id + ' está en ' + regionLabel(annotation.kind.x, annotation.kind.y) +
+                        ' (' + x + '% desde la izquierda y ' + y + '% desde arriba): ' +
+                        (annotation.note || t('defaultPinNote')) + '.'
+                    );
+                } else {
+                    lines.push(
+                        '- Pin ' + annotation.id + ' at ' + regionLabel(annotation.kind.x, annotation.kind.y) +
+                        ' (' + x + '% from the left, ' + y + '% from the top): ' +
+                        (annotation.note || t('defaultPinNote')) + '.'
+                    );
+                }
+            } else {
+                var cx = annotation.kind.x + (annotation.kind.width / 2);
+                var cy = annotation.kind.y + (annotation.kind.height / 2);
+                if (currentLanguage === 'ja') {
+                    lines.push(
+                        '- Rectangle ' + annotation.id + ' は ' + regionLabel(cx, cy) +
+                        ' 周辺で、範囲は x=' + Math.round(annotation.kind.x * 100) + '%-' +
+                        Math.round((annotation.kind.x + annotation.kind.width) * 100) + '%, y=' +
+                        Math.round(annotation.kind.y * 100) + '%-' +
+                        Math.round((annotation.kind.y + annotation.kind.height) * 100) + '% です。' +
+                        (annotation.note || t('defaultRectNote')) + '。'
+                    );
+                } else if (currentLanguage === 'zh') {
+                    lines.push(
+                        '- Rectangle ' + annotation.id + ' 位于' + regionLabel(cx, cy) +
+                        '附近，范围为 x=' + Math.round(annotation.kind.x * 100) + '%-' +
+                        Math.round((annotation.kind.x + annotation.kind.width) * 100) + '%, y=' +
+                        Math.round(annotation.kind.y * 100) + '%-' +
+                        Math.round((annotation.kind.y + annotation.kind.height) * 100) + '%：' +
+                        (annotation.note || t('defaultRectNote')) + '。'
+                    );
+                } else if (currentLanguage === 'ko') {
+                    lines.push(
+                        '- Rectangle ' + annotation.id + ' 는 ' + regionLabel(cx, cy) +
+                        ' 주변이며 범위는 x=' + Math.round(annotation.kind.x * 100) + '%-' +
+                        Math.round((annotation.kind.x + annotation.kind.width) * 100) + '%, y=' +
+                        Math.round(annotation.kind.y * 100) + '%-' +
+                        Math.round((annotation.kind.y + annotation.kind.height) * 100) + '% 입니다. ' +
+                        (annotation.note || t('defaultRectNote')) + '.'
+                    );
+                } else if (currentLanguage === 'de') {
+                    lines.push(
+                        '- Rechteck ' + annotation.id + ' liegt bei ' + regionLabel(cx, cy) +
+                        ' und deckt x=' + Math.round(annotation.kind.x * 100) + '%-' +
+                        Math.round((annotation.kind.x + annotation.kind.width) * 100) + '%, y=' +
+                        Math.round(annotation.kind.y * 100) + '%-' +
+                        Math.round((annotation.kind.y + annotation.kind.height) * 100) + '% ab: ' +
+                        (annotation.note || t('defaultRectNote')) + '.'
+                    );
+                } else if (currentLanguage === 'es') {
+                    lines.push(
+                        '- El rectángulo ' + annotation.id + ' está alrededor de ' + regionLabel(cx, cy) +
+                        ' y cubre x=' + Math.round(annotation.kind.x * 100) + '%-' +
+                        Math.round((annotation.kind.x + annotation.kind.width) * 100) + '%, y=' +
+                        Math.round(annotation.kind.y * 100) + '%-' +
+                        Math.round((annotation.kind.y + annotation.kind.height) * 100) + '%: ' +
+                        (annotation.note || t('defaultRectNote')) + '.'
+                    );
+                } else {
+                    lines.push(
+                        '- Rectangle ' + annotation.id + ' around ' + regionLabel(cx, cy) +
+                        ' spanning x=' + Math.round(annotation.kind.x * 100) + '%-' +
+                        Math.round((annotation.kind.x + annotation.kind.width) * 100) + '%, y=' +
+                        Math.round(annotation.kind.y * 100) + '%-' +
+                        Math.round((annotation.kind.y + annotation.kind.height) * 100) + '%: ' +
+                        (annotation.note || t('defaultRectNote')) + '.'
+                    );
+                }
+            }
+        });
+        return lines.join('\n');
+    }
+
+    function renderPromptPreview() {
+        promptTextEl.textContent = buildPromptHint();
+    }
+
+    function renderAnnotations() {
+        annotationLayer.innerHTML = '';
+        var rect = getDisplayedImageRect();
+
+        annotations.forEach(function(annotation) {
+            if (annotation.kind.type === 'pin') {
+                var pin = document.createElement('div');
+                pin.className = 'pin-marker';
+                pin.style.left = (rect.left + (annotation.kind.x * rect.width)) + 'px';
+                pin.style.top = (rect.top + (annotation.kind.y * rect.height)) + 'px';
+                pin.textContent = annotation.id;
+                if (annotation.note) {
+                    var note = document.createElement('div');
+                    note.className = 'marker-note';
+                    note.textContent = annotation.note;
+                    pin.appendChild(note);
+                }
+                annotationLayer.appendChild(pin);
+            } else {
+                var box = document.createElement('div');
+                box.className = 'rect-marker';
+                box.style.left = (rect.left + (annotation.kind.x * rect.width)) + 'px';
+                box.style.top = (rect.top + (annotation.kind.y * rect.height)) + 'px';
+                box.style.width = (annotation.kind.width * rect.width) + 'px';
+                box.style.height = (annotation.kind.height * rect.height) + 'px';
+                var label = document.createElement('div');
+                label.className = 'rect-label';
+                label.textContent = annotation.id + (annotation.note ? ': ' + annotation.note : '');
+                box.appendChild(label);
+                annotationLayer.appendChild(box);
+            }
+        });
+    }
+
+    function setTool(tool) {
+        activeTool = tool;
+        document.getElementById('tool-pin').classList.toggle('active', tool === 'pin');
+        document.getElementById('tool-rect').classList.toggle('active', tool === 'rect');
+    }
+
+    function currentNote() {
+        var value = noteInput.value.trim();
+        return value ? value : null;
+    }
+
+    function scheduleAutoCopy() {
+        if (isGif) return;
+        if (autoCopyTimer) clearTimeout(autoCopyTimer);
+        autoCopyTimer = setTimeout(function() {
+            if (!annotations.length) {
+                invoke('copy_image_from_base64', { imageBase64: data.imageBase64 }).catch(function() {});
+                lastPreparedBundle = null;
+                return;
+            }
+            invoke('prepare_annotated_capture', {
+                imageBase64: data.imageBase64,
+                annotations: annotations,
+                language: currentLanguage
+            }).then(function(bundle) {
+                lastPreparedBundle = bundle;
+                return invoke('copy_image_from_base64', { imageBase64: bundle.imageBase64 });
+            }).then(function() {
+                showToast(t('toastAnnotatedCopied'));
+            }).catch(function(error) {
+                showError(error);
+            });
+        }, 160);
+    }
+
+    function addPin(point) {
+        annotations.push({
+            id: String(pinCount + 1),
+            kind: { type: 'pin', x: point.x, y: point.y },
+            note: currentNote()
+        });
+        pinCount += 1;
+        renderAnnotations();
+        renderPromptPreview();
+        scheduleAutoCopy();
+    }
+
+    function startDraft(point, pointerId) {
+        draftRect = { startX: point.x, startY: point.y, endX: point.x, endY: point.y };
+        draftPointerId = pointerId;
+        draftDisplayRect = getDisplayedImageRect();
+        if (!draftRectEl) {
+            draftRectEl = document.createElement('div');
+            draftRectEl.className = 'draft-rect';
+        }
+        if (!draftRectEl.parentNode) {
+            draftLayer.appendChild(draftRectEl);
+        }
+        renderDraft();
+    }
+
+    function updateDraft(point) {
+        if (!draftRect) return;
+        draftRect.endX = point.x;
+        draftRect.endY = point.y;
+        if (draftFramePending) return;
+        draftFramePending = true;
+        requestAnimationFrame(function() {
+            draftFramePending = false;
+            renderDraft();
+        });
+    }
+
+    function finishDraft() {
+        if (!draftRect) return;
+        var x = Math.min(draftRect.startX, draftRect.endX);
+        var y = Math.min(draftRect.startY, draftRect.endY);
+        var width = Math.abs(draftRect.endX - draftRect.startX);
+        var height = Math.abs(draftRect.endY - draftRect.startY);
+        draftRect = null;
+        draftPointerId = null;
+        draftDisplayRect = null;
+        renderDraft();
+        if (width < 0.01 || height < 0.01) return;
+        annotations.push({
+            id: alphaId(rectCount),
+            kind: { type: 'rectangle', x: x, y: y, width: width, height: height },
+            note: currentNote()
+        });
+        rectCount += 1;
+        renderAnnotations();
+        renderPromptPreview();
+        scheduleAutoCopy();
+    }
+
+    function renderDraft() {
+        if (!draftRect) {
+            if (draftRectEl && draftRectEl.parentNode) {
+                draftRectEl.parentNode.removeChild(draftRectEl);
+            }
+            return;
+        }
+        var rect = draftDisplayRect || getDisplayedImageRect();
+        var left = rect.left + (Math.min(draftRect.startX, draftRect.endX) * rect.width);
+        var top = rect.top + (Math.min(draftRect.startY, draftRect.endY) * rect.height);
+        var width = Math.abs(draftRect.endX - draftRect.startX) * rect.width;
+        var height = Math.abs(draftRect.endY - draftRect.startY) * rect.height;
+        draftRectEl.style.left = left + 'px';
+        draftRectEl.style.top = top + 'px';
+        draftRectEl.style.width = width + 'px';
+        draftRectEl.style.height = height + 'px';
+    }
+
+    function undoAnnotation() {
+        if (!annotations.length) return;
+        var removed = annotations.pop();
+        if (removed.kind.type === 'pin') {
+            pinCount = Math.max(0, pinCount - 1);
+        } else {
+            rectCount = Math.max(0, rectCount - 1);
+        }
+        renderAnnotations();
+        renderPromptPreview();
+        scheduleAutoCopy();
+    }
+
+    function clearAnnotations() {
+        annotations = [];
+        pinCount = 0;
+        rectCount = 0;
+        renderAnnotations();
+        renderPromptPreview();
+        scheduleAutoCopy();
+    }
+
+    function prepareAnnotatedBundle() {
+        if (!annotations.length) {
+            return Promise.resolve({
+                imageBase64: data.imageBase64,
+                promptText: '',
+                annotationCount: 0
+            });
+        }
+        return invoke('prepare_annotated_capture', {
+            imageBase64: data.imageBase64,
+            annotations: annotations,
+            language: currentLanguage
+        }).then(function(bundle) {
+            lastPreparedBundle = bundle;
+            return bundle;
+        });
+    }
+
+    function copyCurrentCapture() {
+        if (isGif) {
+            invoke('copy_image_from_base64', { imageBase64: data.gifBase64 })
+                .then(function() { showToast(t('toastGifCopied')); })
+                .catch(function(e) { showError(e); });
+            return;
+        }
+
+        if (!annotations.length) {
+            invoke('copy_image_from_base64', { imageBase64: data.imageBase64 })
+                .then(function() { showToast(t('toastCopied')); })
+                .catch(function(e) { showError(e); });
+            return;
+        }
+
+        invoke('copy_annotation_bundle', {
+            imageBase64: data.imageBase64,
+            annotations: annotations,
+            language: currentLanguage
+        }).then(function(result) {
+            lastPreparedBundle = {
+                imageBase64: lastPreparedBundle && lastPreparedBundle.imageBase64 ? lastPreparedBundle.imageBase64 : data.imageBase64,
+                promptText: result.promptText,
+                annotationCount: result.annotationCount
+            };
+            renderPromptPreview();
+            if (result.attachedPromptToClipboard) {
+                showToast(t('toastCopiedWithPrompt'));
+            } else {
+                showToast(t('toastCopiedImageOnly'));
+            }
+        }).catch(function(error) {
+            showError(error);
+        });
+    }
+
+    function copyPromptOnly() {
+        var text = buildPromptHint();
+        if (!annotations.length) {
+            showToast(t('toastAddMarkerFirst'));
+            return;
+        }
+        invoke('copy_text_to_clipboard', { text: text })
+            .then(function() { showToast(t('toastPromptCopied')); })
+            .catch(function(error) { showError(error); });
+    }
+
+    function saveCurrentCapture() {
         if (isGif) {
             invoke('save_gif_to_desktop', { gifBase64: data.gifBase64 })
-                .then(function(name) { showToast('Saved ' + name); })
-                .catch(function(e) { showToast('Error: ' + e); });
-        } else {
-            invoke('save_capture_to_desktop', { imageBase64: data.imageBase64 })
-                .then(function(name) { showToast('Saved ' + name); })
-                .catch(function(e) { showToast('Error: ' + e); });
+                .then(function(name) { showToast(t('toastSaved') + name); })
+                .catch(function(error) { showError(error); });
+            return;
         }
+
+        prepareAnnotatedBundle()
+            .then(function(bundle) {
+                return invoke('save_capture_to_desktop', { imageBase64: bundle.imageBase64 });
+            })
+            .then(function(name) {
+                showToast(t('toastSaved') + name);
+            })
+            .catch(function(error) {
+                showError(error);
+            });
     }
 
-    function expandPreview() {
+    function setEditorVisibility(visible) {
+        var show = visible && isExpanded && !isGif;
+        editorChrome.style.display = show ? 'block' : 'none';
+        annotationLayer.style.display = show ? 'block' : 'none';
+        draftLayer.style.display = show ? 'block' : 'none';
+        thumbArea.classList.toggle('editing', show);
+    }
+
+    function expandPreview(enterAnnotate) {
         isAnimating = true;
         invoke('get_screen_size', { label: LABEL })
             .then(function(screenSize) {
-                var screenW = screenSize[0], screenH = screenSize[1];
-                var maxW = screenW * 0.8;
-                var maxH = screenH * 0.8 - INFO_HEIGHT;
-                var imgW = data.optimizedWidth || data.originalWidth;
-                var imgH = data.optimizedHeight || data.originalHeight;
-                var scale = Math.min(maxW / imgW, maxH / imgH, 1);
-                var dispW = Math.max(400, Math.round(imgW * scale));
-                var dispH = Math.round(imgH * scale);
-                var winW = Math.max(dispW, 400);
-                var winH = dispH + INFO_HEIGHT;
+                var screenW = screenSize[0];
+                var screenH = screenSize[1];
+                var metrics = imageMetrics();
+                var maxW = screenW * 0.82;
+                var maxH = screenH * 0.76 - BASE_INFO_HEIGHT - (isGif ? 0 : EDIT_PANEL_HEIGHT);
+                var scale = Math.min(maxW / metrics.width, maxH / metrics.height, 1);
+                var dispW = Math.max(420, Math.round(metrics.width * scale));
+                var dispH = Math.round(metrics.height * scale);
+                var infoHeight = BASE_INFO_HEIGHT + (isGif ? 0 : EDIT_PANEL_HEIGHT);
+                var winW = Math.max(dispW, 460);
+                var winH = dispH + infoHeight;
                 var x = Math.round((screenW - winW) / 2);
                 var y = Math.round((screenH - winH) / 2);
 
-                var popup = document.getElementById('popup');
                 popup.style.opacity = '0';
 
                 setTimeout(function() {
@@ -305,36 +1173,44 @@ function boot(attempt) {
                         label: LABEL, width: winW, height: winH, x: x, y: y
                     }).then(function() {
                         popup.style.width = winW + 'px';
-                        document.getElementById('thumb-area').style.height = dispH + 'px';
-                        document.getElementById('preview-img').style.objectFit = 'contain';
-                        document.getElementById('preview-img').style.background = 'rgba(0,0,0,0.3)';
+                        thumbArea.style.height = dispH + 'px';
+                        previewImg.style.objectFit = 'contain';
+                        previewImg.style.background = 'rgba(0,0,0,0.25)';
                         setTimeout(function() {
                             popup.style.opacity = '1';
                             isExpanded = true;
                             isAnimating = false;
-                        }, 50);
+                            setEditorVisibility(enterAnnotate !== false);
+                            renderAnnotations();
+                            renderDraft();
+                            renderPromptPreview();
+                        }, 40);
                     }).catch(function() {
                         popup.style.opacity = '1';
                         isAnimating = false;
                     });
                 }, 160);
             })
-            .catch(function(e) {
-                showToast('ERR: ' + e);
+            .catch(function(error) {
+                showSystemError(error);
                 isAnimating = false;
             });
     }
 
     function collapsePreview() {
         isAnimating = true;
-        var popup = document.getElementById('popup');
         popup.style.opacity = '0';
 
         setTimeout(function() {
             popup.style.width = COLLAPSED_WIDTH + 'px';
-            document.getElementById('thumb-area').style.height = THUMB_HEIGHT + 'px';
-            document.getElementById('preview-img').style.objectFit = 'cover';
-            document.getElementById('preview-img').style.background = 'none';
+            thumbArea.style.height = THUMB_HEIGHT + 'px';
+            previewImg.style.objectFit = 'cover';
+            previewImg.style.background = 'none';
+            setEditorVisibility(false);
+            draftRect = null;
+            draftPointerId = null;
+            draftDisplayRect = null;
+            renderDraft();
 
             invoke('reposition_preview', { label: LABEL })
                 .catch(function() {})
@@ -343,42 +1219,150 @@ function boot(attempt) {
                         popup.style.opacity = '1';
                         isExpanded = false;
                         isAnimating = false;
+                        renderAnnotations();
                     }, 50);
                 });
         }, 160);
     }
 
-    // Wire up event listeners
-    document.getElementById('close-btn').addEventListener('click', function(e) {
-        e.stopPropagation();
+    document.getElementById('close-btn').addEventListener('click', function(event) {
+        event.stopPropagation();
         dismissPreview();
     });
 
-    document.getElementById('thumb-area').addEventListener('click', function() {
+    thumbArea.addEventListener('click', function(event) {
         if (isAnimating) return;
-        if (isExpanded) { collapsePreview(); } else { expandPreview(); }
-    });
-
-    document.getElementById('btn-copy').addEventListener('click', function(e) {
-        e.stopPropagation();
-        copyCapture();
-    });
-
-    document.getElementById('btn-save').addEventListener('click', function(e) {
-        e.stopPropagation();
-        saveCapture();
-    });
-
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            if (isExpanded) { collapsePreview(); } else { dismissPreview(); }
+        if (!isExpanded) {
+            expandPreview(false);
+            return;
         }
-        if (e.key === 'c' || e.key === 'C') copyCapture();
-        if (e.key === 's' || e.key === 'S') saveCapture();
+        if (isGif) return;
+        if (event.target.closest('.hover-overlay') || event.target.closest('.toolbar') || event.target.closest('.prompt-panel')) {
+            return;
+        }
+        if (activeTool === 'pin') {
+            var point = pointToNormalized(event.clientX, event.clientY);
+            if (!point) return;
+            addPin(point);
+        }
     });
 
+    thumbArea.addEventListener('pointerdown', function(event) {
+        if (!isExpanded || isGif || activeTool !== 'rect') return;
+        if (event.target.closest('.toolbar') || event.target.closest('.prompt-panel')) return;
+        event.preventDefault();
+        var bounds = thumbArea.getBoundingClientRect();
+        var rect = getDisplayedImageRect(bounds);
+        var point = pointToNormalized(event.clientX, event.clientY, { bounds: bounds, rect: rect });
+        if (!point) return;
+        draftDisplayRect = rect;
+        thumbArea.setPointerCapture(event.pointerId);
+        startDraft(point, event.pointerId);
+    });
+
+    thumbArea.addEventListener('dragstart', function(event) {
+        event.preventDefault();
+    });
+
+    thumbArea.addEventListener('pointermove', function(event) {
+        if (!draftRect || event.pointerId !== draftPointerId) return;
+        var bounds = thumbArea.getBoundingClientRect();
+        var point = pointToNormalized(event.clientX, event.clientY, {
+            bounds: bounds,
+            rect: draftDisplayRect || getDisplayedImageRect(bounds),
+            clamp: true
+        });
+        updateDraft(point);
+    });
+
+    thumbArea.addEventListener('pointerup', function(event) {
+        if (!draftRect || event.pointerId !== draftPointerId) return;
+        finishDraft();
+    });
+
+    thumbArea.addEventListener('pointercancel', function(event) {
+        if (!draftRect || event.pointerId !== draftPointerId) return;
+        draftRect = null;
+        draftPointerId = null;
+        draftDisplayRect = null;
+        renderDraft();
+    });
+
+    document.getElementById('btn-copy').addEventListener('click', function(event) {
+        event.stopPropagation();
+        copyCurrentCapture();
+    });
+
+    document.getElementById('btn-annotate').addEventListener('click', function(event) {
+        event.stopPropagation();
+        if (isGif) return;
+        if (!isExpanded) {
+            expandPreview(true);
+        } else {
+            setEditorVisibility(true);
+            showToast(t('toastAnnotateReady'));
+        }
+    });
+
+    document.getElementById('btn-save').addEventListener('click', function(event) {
+        event.stopPropagation();
+        saveCurrentCapture();
+    });
+
+    document.getElementById('tool-pin').addEventListener('click', function(event) {
+        event.stopPropagation();
+        setTool('pin');
+    });
+
+    document.getElementById('tool-rect').addEventListener('click', function(event) {
+        event.stopPropagation();
+        setTool('rect');
+    });
+
+    document.getElementById('tool-undo').addEventListener('click', function(event) {
+        event.stopPropagation();
+        undoAnnotation();
+    });
+
+    document.getElementById('tool-clear').addEventListener('click', function(event) {
+        event.stopPropagation();
+        clearAnnotations();
+    });
+
+    document.getElementById('tool-copy-llm').addEventListener('click', function(event) {
+        event.stopPropagation();
+        copyCurrentCapture();
+    });
+
+    document.getElementById('tool-copy-prompt').addEventListener('click', function(event) {
+        event.stopPropagation();
+        copyPromptOnly();
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            if (draftRect) {
+                draftRect = null;
+                renderDraft();
+                return;
+            }
+            if (isExpanded) {
+                collapsePreview();
+            } else {
+                dismissPreview();
+            }
+        }
+        if (event.key === 'c' || event.key === 'C') copyCurrentCapture();
+        if (event.key === 's' || event.key === 'S') saveCurrentCapture();
+        if ((event.key === 'z' || event.key === 'Z') && (event.metaKey || event.ctrlKey)) {
+            undoAnnotation();
+        }
+    });
+
+    renderPromptPreview();
+    setEditorVisibility(false);
     setTimeout(function() {
-        document.getElementById('toast').style.opacity = '0.5';
+        toastEl.style.opacity = '0.5';
     }, 2000);
 }
 

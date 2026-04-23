@@ -1,6 +1,9 @@
 use base64::Engine as _;
 use serde::Serialize;
-use snapforge_core::{build_capture_filename, detect_image_format, CaptureMetadata};
+use snapforge_core::{
+    build_capture_filename, build_llm_prompt_hint_for_language, detect_image_format,
+    render_annotations_to_png, Annotation, CaptureMetadata,
+};
 use tauri::{AppHandle, Manager as _, State};
 
 use crate::clipboard;
@@ -24,6 +27,22 @@ pub struct WindowInfoResponse {
     pub title: String,
     pub app_name: String,
     pub is_on_screen: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnnotatedCaptureResponse {
+    pub image_base64: String,
+    pub prompt_text: String,
+    pub annotation_count: usize,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CopyAnnotationBundleResponse {
+    pub prompt_text: String,
+    pub annotation_count: usize,
+    pub attached_prompt_to_clipboard: bool,
 }
 
 #[tauri::command]
@@ -96,6 +115,65 @@ pub fn copy_image_from_base64(image_base64: String) -> Result<(), CommandError> 
 
     tracing::info!("Image re-copied to clipboard from base64");
     Ok(())
+}
+
+#[tauri::command]
+pub fn copy_text_to_clipboard(text: String) -> Result<(), CommandError> {
+    clipboard::copy_text_to_clipboard(&text).map_err(|e| CommandError {
+        message: e,
+        code: "clipboard_error".to_string(),
+    })?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn prepare_annotated_capture(
+    image_base64: String,
+    annotations: Vec<Annotation>,
+    language: Option<String>,
+) -> Result<AnnotatedCaptureResponse, CommandError> {
+    let bundle = build_annotation_bundle(&image_base64, &annotations, language.as_deref())?;
+    Ok(AnnotatedCaptureResponse {
+        image_base64: bundle.image_base64,
+        prompt_text: bundle.prompt_text,
+        annotation_count: annotations.len(),
+    })
+}
+
+#[tauri::command]
+pub fn copy_annotation_bundle(
+    image_base64: String,
+    annotations: Vec<Annotation>,
+    language: Option<String>,
+) -> Result<CopyAnnotationBundleResponse, CommandError> {
+    let bundle = build_annotation_bundle(&image_base64, &annotations, language.as_deref())?;
+
+    let attached_prompt_to_clipboard = if bundle.prompt_text.is_empty() {
+        clipboard::copy_encoded_to_clipboard(&bundle.image_bytes).map_err(|e| CommandError {
+            message: e,
+            code: "clipboard_error".to_string(),
+        })?;
+        false
+    } else {
+        clipboard::copy_png_and_text_to_clipboard(&bundle.image_bytes, &bundle.prompt_text)
+            .map_err(|e| CommandError {
+                message: e,
+                code: "clipboard_error".to_string(),
+            })?
+    };
+
+    if !attached_prompt_to_clipboard {
+        clipboard::copy_encoded_to_clipboard(&bundle.image_bytes).map_err(|e| CommandError {
+            message: e,
+            code: "clipboard_error".to_string(),
+        })?;
+    }
+
+    Ok(CopyAnnotationBundleResponse {
+        prompt_text: bundle.prompt_text,
+        annotation_count: annotations.len(),
+        attached_prompt_to_clipboard,
+    })
 }
 
 /// Resolve a save location path, expanding `~` to HOME.
@@ -227,6 +305,63 @@ pub fn get_screen_size(app: AppHandle, label: String) -> Result<(f64, f64), Comm
 #[tauri::command]
 pub fn reposition_preview(app: AppHandle, label: String) {
     crate::preview_window::reposition_single(&app, &label);
+}
+
+struct AnnotationBundle {
+    image_bytes: Vec<u8>,
+    image_base64: String,
+    prompt_text: String,
+}
+
+fn build_annotation_bundle(
+    image_base64: &str,
+    annotations: &[Annotation],
+    language: Option<&str>,
+) -> Result<AnnotationBundle, CommandError> {
+    let image_bytes = base64::engine::general_purpose::STANDARD
+        .decode(image_base64)
+        .map_err(|e| CommandError {
+            message: format!("Failed to decode base64: {e}"),
+            code: "decode_error".to_string(),
+        })?;
+
+    let (image_bytes, prompt_text) = if annotations.is_empty() {
+        (image_bytes, String::new())
+    } else {
+        let img = image::ImageReader::new(std::io::Cursor::new(&image_bytes))
+            .with_guessed_format()
+            .map_err(|e| CommandError {
+                message: format!("Failed to guess image format: {e}"),
+                code: "image_error".to_string(),
+            })?
+            .decode()
+            .map_err(|e| CommandError {
+                message: format!("Failed to decode image: {e}"),
+                code: "image_error".to_string(),
+            })?;
+        let rgba = img.to_rgba8();
+        let (width, height) = rgba.dimensions();
+        let rendered =
+            render_annotations_to_png(&rgba, width, height, annotations).map_err(|e| {
+                CommandError {
+                    message: e.to_string(),
+                    code: "annotation_error".to_string(),
+                }
+            })?;
+
+        (
+            rendered.encoded_png,
+            build_llm_prompt_hint_for_language(annotations, language.unwrap_or("en"))
+                .unwrap_or_default(),
+        )
+    };
+
+    let image_base64 = base64::engine::general_purpose::STANDARD.encode(&image_bytes);
+    Ok(AnnotationBundle {
+        image_bytes,
+        image_base64,
+        prompt_text,
+    })
 }
 
 #[cfg(test)]

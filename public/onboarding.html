@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Welcome to Gaze</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #1c1c1e;
+    color: #f5f5f7;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+}
+body {
+    display: flex;
+    flex-direction: column;
+}
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.lang-bar {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    display: flex;
+    gap: 4px;
+    font-size: 11px;
+    z-index: 10;
+}
+.lang-bar button {
+    appearance: none;
+    background: transparent;
+    color: rgba(245, 245, 247, 0.55);
+    border: 1px solid transparent;
+    padding: 3px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font: inherit;
+    transition: all 100ms ease;
+}
+.lang-bar button:hover {
+    color: rgba(245, 245, 247, 0.9);
+}
+.lang-bar button.active {
+    color: #f5f5f7;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 56px 24px;
+    overflow-y: auto;
+}
+.step-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+}
+.step-sub {
+    font-size: 13px;
+    color: rgba(245, 245, 247, 0.7);
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    appearance: none;
+    background: #0a84ff;
+    color: white;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: filter 100ms ease;
+}
+.action-btn:hover { filter: brightness(1.1); }
+.action-btn:active { filter: brightness(0.95); }
+.action-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f5f5f7;
+}
+.permission-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: rgba(245, 245, 247, 0.6);
+}
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+}
+.dot.granted { background: #34c759; }
+.dot.checking { background: #ffd60a; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+.shortcut-list {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px 24px;
+    margin-bottom: 22px;
+}
+.shortcut-list .label {
+    font-size: 13px;
+    color: rgba(245, 245, 247, 0.85);
+}
+.shortcut-list .keys {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: rgba(245, 245, 247, 0.65);
+    white-space: nowrap;
+}
+.cli-block {
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.cli-block .heading {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(245, 245, 247, 0.55);
+    margin-bottom: 8px;
+}
+.cli-block pre {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: #d6d6d8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.cli-block .comment { color: rgba(245, 245, 247, 0.4); }
+.try-hint {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(10, 132, 255, 0.08);
+    border: 1px solid rgba(10, 132, 255, 0.25);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+.try-hint .key {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 0 2px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+}
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: #1c1c1e;
+}
+.steps {
+    display: flex;
+    gap: 6px;
+}
+.steps span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: background 150ms ease;
+}
+.steps span.active {
+    background: #f5f5f7;
+}
+.nav {
+    display: flex;
+    gap: 8px;
+}
+.nav button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="lang-bar">
+        <button id="lang-en" type="button">EN</button>
+        <button id="lang-ja" type="button">JA</button>
+    </div>
+    <div class="content" id="content"></div>
+    <div class="footer">
+        <div class="steps">
+            <span id="step-dot-0"></span>
+            <span id="step-dot-1"></span>
+            <span id="step-dot-2"></span>
+        </div>
+        <div class="nav">
+            <button id="btn-back" class="action-btn secondary" type="button"></button>
+            <button id="btn-next" class="action-btn" type="button"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+var i18n = {
+    en: {
+        windowTitle: "Welcome to Gaze",
+        back: "Back",
+        next: "Next",
+        done: "Get Started",
+        s1Title: "Grant Screen Recording",
+        s1Body: "Gaze needs Screen Recording permission to capture your screen. macOS will ask once — the access never leaves your machine.",
+        s1OpenSettings: "Open System Settings",
+        s1Pending: "Waiting for permission…",
+        s1Granted: "Permission granted",
+        s1NotGranted: "Permission not granted yet",
+        s2Title: "Try Your First Capture",
+        s2Body: "Press the shortcut below to capture an area of your screen. The result lands on your clipboard, ready to paste into any AI tool.",
+        s2HintPrefix: "Press",
+        s2HintSuffix: "and drag to select an area.",
+        s2Note: "Cancel anytime with Esc. You can also trigger captures from the menu bar icon.",
+        s3Title: "You're All Set",
+        s3Body: "Here are the shortcuts and CLI commands you'll use the most.",
+        s3Shortcuts: "Shortcuts",
+        s3Cli: "CLI — use Gaze with AI tools",
+        s3MenuNote: "The Gaze icon lives in your menu bar. Open this guide again from there anytime.",
+        scArea: "Capture an area",
+        scWindow: "Capture a window",
+        scFullscreen: "Capture full screen",
+        scGif: "Toggle GIF recording"
+    },
+    ja: {
+        windowTitle: "Gaze へようこそ",
+        back: "戻る",
+        next: "次へ",
+        done: "はじめる",
+        s1Title: "画面収録を許可",
+        s1Body: "Gaze は画面をキャプチャするために 「画面収録」 権限が必要です。macOS が一度だけ許可を求めます。データはこの Mac の中だけで処理されます。",
+        s1OpenSettings: "システム設定を開く",
+        s1Pending: "許可を待機中…",
+        s1Granted: "許可済み",
+        s1NotGranted: "まだ許可されていません",
+        s2Title: "最初のキャプチャを試す",
+        s2Body: "下記のショートカットを押して画面の一部をキャプチャしてみましょう。結果はクリップボードにコピーされ、AI ツールに貼り付けるだけで使えます。",
+        s2HintPrefix: "押して",
+        s2HintSuffix: "、領域をドラッグで選択。",
+        s2Note: "Esc でいつでもキャンセルできます。メニューバーのアイコンからも起動できます。",
+        s3Title: "準備完了",
+        s3Body: "よく使うショートカットと CLI コマンドです。",
+        s3Shortcuts: "ショートカット",
+        s3Cli: "CLI — AI ツールと一緒に",
+        s3MenuNote: "Gaze のアイコンはメニューバーにあります。このガイドはそこからいつでも開けます。",
+        scArea: "領域をキャプチャ",
+        scWindow: "ウィンドウをキャプチャ",
+        scFullscreen: "画面全体をキャプチャ",
+        scGif: "GIF 録画を切り替え"
+    }
+};
+
+var invoke = null;
+var lang = 'en';
+var stepIndex = 0;
+var permissionGranted = false;
+var permissionTimer = null;
+
+function t(key) {
+    return (i18n[lang] && i18n[lang][key]) || i18n.en[key] || key;
+}
+
+function setLang(next) {
+    if (!i18n[next]) return;
+    lang = next;
+    document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    document.getElementById('lang-ja').classList.toggle('active', lang === 'ja');
+    document.title = t('windowTitle');
+    render();
+}
+
+function renderStep1() {
+    var statusClass, statusText;
+    if (permissionGranted) {
+        statusClass = 'granted';
+        statusText = t('s1Granted');
+    } else if (permissionTimer) {
+        statusClass = 'checking';
+        statusText = t('s1Pending');
+    } else {
+        statusClass = '';
+        statusText = t('s1NotGranted');
+    }
+    return '' +
+        '<div class="step-title">' + t('s1Title') + '</div>' +
+        '<div class="step-sub">' + t('s1Body') + '</div>' +
+        '<button id="open-settings-btn" class="action-btn" type="button">' + t('s1OpenSettings') + '</button>' +
+        '<div class="permission-status">' +
+            '<span class="dot ' + statusClass + '"></span>' +
+            '<span>' + statusText + '</span>' +
+        '</div>';
+}
+
+function renderStep2() {
+    return '' +
+        '<div class="step-title">' + t('s2Title') + '</div>' +
+        '<div class="step-sub">' + t('s2Body') + '</div>' +
+        '<div class="try-hint">' +
+            t('s2HintPrefix') +
+            ' <span class="key">Alt</span> + <span class="key">Shift</span> + <span class="key">2</span> ' +
+            t('s2HintSuffix') +
+        '</div>' +
+        '<div class="step-sub" style="margin-top:14px;">' + t('s2Note') + '</div>';
+}
+
+function renderStep3() {
+    return '' +
+        '<div class="step-title">' + t('s3Title') + '</div>' +
+        '<div class="step-sub">' + t('s3Body') + '</div>' +
+        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:rgba(245,245,247,0.55);margin-bottom:8px;">' + t('s3Shortcuts') + '</div>' +
+        '<div class="shortcut-list">' +
+            '<div class="label">' + t('scArea') + '</div><div class="keys">Alt + Shift + 2</div>' +
+            '<div class="label">' + t('scWindow') + '</div><div class="keys">Alt + Shift + 1</div>' +
+            '<div class="label">' + t('scFullscreen') + '</div><div class="keys">Alt + Shift + 3</div>' +
+            '<div class="label">' + t('scGif') + '</div><div class="keys">Alt + Shift + 5</div>' +
+        '</div>' +
+        '<div class="cli-block">' +
+            '<div class="heading">' + t('s3Cli') + '</div>' +
+            '<pre>' +
+                '$ brew install gaze\n' +
+                '$ gaze capture --copy        <span class="comment"># then ⌘V into Claude / ChatGPT / Cursor / Aider</span>\n' +
+                '$ gaze capture -o shot.webp  <span class="comment"># for AI agents that read files</span>' +
+            '</pre>' +
+        '</div>' +
+        '<div class="step-sub" style="margin-top:14px;">' + t('s3MenuNote') + '</div>';
+}
+
+function renderFooter() {
+    var dots = ['step-dot-0','step-dot-1','step-dot-2'];
+    dots.forEach(function(id, i) {
+        document.getElementById(id).classList.toggle('active', i === stepIndex);
+    });
+
+    var backBtn = document.getElementById('btn-back');
+    var nextBtn = document.getElementById('btn-next');
+    backBtn.textContent = t('back');
+    backBtn.disabled = stepIndex === 0;
+
+    if (stepIndex === 2) {
+        nextBtn.textContent = t('done');
+        nextBtn.disabled = false;
+    } else if (stepIndex === 0) {
+        nextBtn.textContent = t('next');
+        nextBtn.disabled = !permissionGranted;
+    } else {
+        nextBtn.textContent = t('next');
+        nextBtn.disabled = false;
+    }
+}
+
+function render() {
+    var content = document.getElementById('content');
+    if (stepIndex === 0) {
+        content.innerHTML = renderStep1();
+        var openBtn = document.getElementById('open-settings-btn');
+        if (openBtn) {
+            openBtn.addEventListener('click', function() {
+                if (!invoke) return;
+                invoke('open_screen_recording_settings').catch(function() {});
+                startPermissionPolling();
+            });
+        }
+    } else if (stepIndex === 1) {
+        content.innerHTML = renderStep2();
+    } else {
+        content.innerHTML = renderStep3();
+    }
+    renderFooter();
+}
+
+function startPermissionPolling() {
+    if (!invoke || permissionTimer) return;
+    permissionTimer = setInterval(function() {
+        invoke('check_permission').then(function(granted) {
+            if (granted && !permissionGranted) {
+                permissionGranted = true;
+                clearInterval(permissionTimer);
+                permissionTimer = null;
+                render();
+            }
+        }).catch(function() {});
+    }, 1000);
+    render();
+}
+
+function goNext() {
+    if (stepIndex === 2) {
+        if (invoke) {
+            invoke('mark_onboarding_complete').catch(function() {});
+        }
+        try { window.close(); } catch (e) {}
+        return;
+    }
+    stepIndex += 1;
+    render();
+}
+
+function goBack() {
+    if (stepIndex === 0) return;
+    stepIndex -= 1;
+    render();
+}
+
+document.getElementById('lang-en').addEventListener('click', function() { setLang('en'); });
+document.getElementById('lang-ja').addEventListener('click', function() { setLang('ja'); });
+document.getElementById('btn-back').addEventListener('click', goBack);
+document.getElementById('btn-next').addEventListener('click', goNext);
+
+setLang('en');
+
+function boot(attempt) {
+    if (!window.__TAURI__ || !window.__TAURI__.core) {
+        if (attempt < 200) setTimeout(function() { boot(attempt + 1); }, 16);
+        return;
+    }
+    invoke = window.__TAURI__.core.invoke;
+
+    invoke('get_settings').then(function(s) {
+        if (s && s.language && i18n[s.language]) {
+            setLang(s.language);
+        }
+    }).catch(function() {});
+
+    invoke('check_permission').then(function(granted) {
+        if (granted) {
+            permissionGranted = true;
+            render();
+        } else {
+            // Start polling immediately so users who already opened System Settings
+            // before launching Gaze see the green check on its own.
+            startPermissionPolling();
+        }
+    }).catch(function() {});
+}
+
+boot(0);
+</script>
+</body>
+</html>

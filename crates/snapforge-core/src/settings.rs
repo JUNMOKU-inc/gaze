@@ -27,6 +27,8 @@ pub struct Settings {
     pub preview_position: String,
     pub max_previews: u32,
     pub save_location: String,
+
+    pub onboarding_completed: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +69,8 @@ impl Default for Settings {
             preview_position: "bottom_right".into(),
             max_previews: 5,
             save_location: "~/Desktop".into(),
+
+            onboarding_completed: false,
         }
     }
 }
@@ -187,6 +191,7 @@ pub const SETTINGS_KEYS: &[&str] = &[
     "previewPosition",
     "maxPreviews",
     "saveLocation",
+    "onboardingCompleted",
 ];
 
 /// Read a single field from a settings instance. Returns the JSON value of the field,
@@ -449,6 +454,7 @@ mod tests {
             "\"previewPosition\"",
             "\"maxPreviews\"",
             "\"saveLocation\"",
+            "\"onboardingCompleted\"",
         ] {
             assert!(json.contains(key), "missing key {key} in {json}");
         }
@@ -496,6 +502,7 @@ mod tests {
             preview_position: "top_left".into(),
             max_previews: 10,
             save_location: "/tmp".into(),
+            onboarding_completed: true,
             ..Default::default()
         };
         let json = serde_json::to_string_pretty(&s).unwrap();
@@ -515,6 +522,7 @@ mod tests {
         assert_eq!(s.preview_position, restored.preview_position);
         assert_eq!(s.max_previews, restored.max_previews);
         assert_eq!(s.save_location, restored.save_location);
+        assert_eq!(s.onboarding_completed, restored.onboarding_completed);
     }
 
     #[test]

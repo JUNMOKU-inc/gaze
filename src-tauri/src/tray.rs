@@ -36,6 +36,9 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .accelerator("CmdOrCtrl+,")
         .build(app)?;
 
+    let show_onboarding =
+        MenuItemBuilder::with_id("show_onboarding", "Show Welcome Guide").build(app)?;
+
     let quit = MenuItemBuilder::with_id("quit", "Quit")
         .accelerator("CmdOrCtrl+Q")
         .build(app)?;
@@ -48,6 +51,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .item(&gif_record)
         .separator()
         .item(&settings)
+        .item(&show_onboarding)
         .separator()
         .item(&quit)
         .build()?;
@@ -93,6 +97,10 @@ fn handle_menu_event(app: &AppHandle, menu_id: &str) {
             tracing::info!("Tray: settings requested");
             open_settings_window(app);
         }
+        "show_onboarding" => {
+            tracing::info!("Tray: onboarding requested");
+            open_onboarding_window(app);
+        }
         "quit" => {
             tracing::info!("Tray: quit requested");
             app.exit(0);
@@ -125,6 +133,35 @@ fn open_settings_window(app: &AppHandle) {
     {
         Ok(_) => tracing::info!("Settings window opened"),
         Err(e) => tracing::error!("Failed to open settings window: {e}"),
+    }
+}
+
+/// Onboarding window dimensions. Kept here so tweaking the visual size is a
+/// one-line change on the Rust side; the HTML uses CSS to adapt.
+const ONBOARDING_WIDTH: f64 = 560.0;
+const ONBOARDING_HEIGHT: f64 = 520.0;
+
+pub fn open_onboarding_window(app: &AppHandle) {
+    if let Some(win) = app.get_webview_window("onboarding") {
+        let _ = win.set_focus();
+        return;
+    }
+
+    match WebviewWindowBuilder::new(
+        app,
+        "onboarding",
+        tauri::WebviewUrl::App("onboarding.html".into()),
+    )
+    .title("Welcome to Gaze")
+    .inner_size(ONBOARDING_WIDTH, ONBOARDING_HEIGHT)
+    .decorations(true)
+    .resizable(false)
+    .center()
+    .focused(true)
+    .build()
+    {
+        Ok(_) => tracing::info!("Onboarding window opened"),
+        Err(e) => tracing::error!("Failed to open onboarding window: {e}"),
     }
 }
 

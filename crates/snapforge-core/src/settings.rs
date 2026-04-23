@@ -21,6 +21,8 @@ pub struct Settings {
 
     pub shortcut_area: String,
     pub shortcut_fullscreen: String,
+    pub shortcut_window: String,
+    pub shortcut_gif: String,
 
     pub preview_position: String,
     pub max_previews: u32,
@@ -59,6 +61,8 @@ impl Default for Settings {
 
             shortcut_area: "Alt+Shift+2".into(),
             shortcut_fullscreen: "Alt+Shift+3".into(),
+            shortcut_window: "Alt+Shift+1".into(),
+            shortcut_gif: "Alt+Shift+5".into(),
 
             preview_position: "bottom_right".into(),
             max_previews: 5,
@@ -178,6 +182,8 @@ pub const SETTINGS_KEYS: &[&str] = &[
     "gifQuality",
     "shortcutArea",
     "shortcutFullscreen",
+    "shortcutWindow",
+    "shortcutGif",
     "previewPosition",
     "maxPreviews",
     "saveLocation",
@@ -224,8 +230,26 @@ pub fn set_setting_field(
             reason: e.to_string(),
         })?;
 
+    validate_shortcut_field(key, &updated)?;
+
     *settings = updated;
     Ok(())
+}
+
+/// Reject malformed shortcut strings at the boundary so an invalid value
+/// never hits disk and silently fails to register on the next launch.
+fn validate_shortcut_field(key: &str, settings: &Settings) -> Result<(), SettingsError> {
+    let value = match key {
+        "shortcutArea" => &settings.shortcut_area,
+        "shortcutFullscreen" => &settings.shortcut_fullscreen,
+        "shortcutWindow" => &settings.shortcut_window,
+        "shortcutGif" => &settings.shortcut_gif,
+        _ => return Ok(()),
+    };
+    crate::shortcut::validate_shortcut_str(value).map_err(|reason| SettingsError::InvalidValue {
+        key: key.to_string(),
+        reason,
+    })
 }
 
 fn parse_cli_value(raw: &str) -> serde_json::Value {
@@ -467,6 +491,8 @@ mod tests {
             gif_quality: 75,
             shortcut_area: "Cmd+Shift+A".into(),
             shortcut_fullscreen: "Cmd+Shift+F".into(),
+            shortcut_window: "Cmd+Shift+W".into(),
+            shortcut_gif: "Cmd+Shift+G".into(),
             preview_position: "top_left".into(),
             max_previews: 10,
             save_location: "/tmp".into(),
@@ -484,8 +510,44 @@ mod tests {
         assert_eq!(s.gif_quality, restored.gif_quality);
         assert_eq!(s.shortcut_area, restored.shortcut_area);
         assert_eq!(s.shortcut_fullscreen, restored.shortcut_fullscreen);
+        assert_eq!(s.shortcut_window, restored.shortcut_window);
+        assert_eq!(s.shortcut_gif, restored.shortcut_gif);
         assert_eq!(s.preview_position, restored.preview_position);
         assert_eq!(s.max_previews, restored.max_previews);
         assert_eq!(s.save_location, restored.save_location);
+    }
+
+    #[test]
+    fn set_shortcut_field_accepts_valid_combo() {
+        let mut s = Settings::default();
+        set_setting_field(&mut s, "shortcutFullscreen", "Alt+Shift+F").unwrap();
+        assert_eq!(s.shortcut_fullscreen, "Alt+Shift+F");
+    }
+
+    #[test]
+    fn set_shortcut_field_rejects_macos_reserved() {
+        let mut s = Settings::default();
+        let err = set_setting_field(&mut s, "shortcutFullscreen", "Cmd+Shift+3").unwrap_err();
+        match err {
+            SettingsError::InvalidValue { key, reason } => {
+                assert_eq!(key, "shortcutFullscreen");
+                assert!(reason.contains("reserved"), "got: {reason}");
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn set_shortcut_field_rejects_unknown_modifier() {
+        let mut s = Settings::default();
+        let err = set_setting_field(&mut s, "shortcutArea", "Hyper+A").unwrap_err();
+        assert!(matches!(err, SettingsError::InvalidValue { .. }));
+    }
+
+    #[test]
+    fn set_shortcut_field_rejects_bare_key() {
+        let mut s = Settings::default();
+        let err = set_setting_field(&mut s, "shortcutGif", "G").unwrap_err();
+        assert!(matches!(err, SettingsError::InvalidValue { .. }));
     }
 }

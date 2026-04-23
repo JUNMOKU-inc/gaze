@@ -54,9 +54,9 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     TrayIconBuilder::new()
         .icon(tauri::image::Image::from_bytes(include_bytes!(
-            "../icons/32x32.png"
+            "../icons/tray-template-32.png"
         ))?)
-        .icon_as_template(false)
+        .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(move |app, event| {

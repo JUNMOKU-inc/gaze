@@ -413,10 +413,12 @@ function startPermissionPolling() {
 
 function goNext() {
     if (stepIndex === 2) {
+        // mark_onboarding_complete persists the flag AND closes the window
+        // on the Rust side — window.close() from the WebView is a no-op in
+        // Tauri v2, so we don't try it here.
         if (invoke) {
             invoke('mark_onboarding_complete').catch(function() {});
         }
-        try { window.close(); } catch (e) {}
         return;
     }
     stepIndex += 1;

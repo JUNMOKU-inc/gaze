@@ -53,6 +53,9 @@ pub fn run() {
             // Register global hotkeys
             register_global_shortcuts(app.handle())?;
 
+            // Watch settings.json for external edits (CLI-driven changes etc.)
+            crate::settings::spawn_settings_watcher(app.handle().clone());
+
             tracing::info!("Gaze started (menu-bar only mode)");
             Ok(())
         })

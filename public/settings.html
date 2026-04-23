@@ -422,10 +422,7 @@ var settings = {
     shortcutFullscreen: 'Alt+Shift+3',
     previewPosition: 'bottom-right',
     previewMaxOnScreen: 5,
-    saveLocation: '~/Desktop',
-    // Fields without UI controls; preserved through load/save to avoid clobbering user values.
-    ocrEnabled: true,
-    smartMasking: false
+    saveLocation: '~/Desktop'
 };
 
 var invoke = null;
@@ -685,8 +682,6 @@ function saveSettings() {
             mode: settings.maxDimension,
             pixels: settings.maxDimensionPixels
         },
-        ocrEnabled: settings.ocrEnabled,
-        smartMasking: settings.smartMasking,
         maxRecordingSec: settings.maxDuration,
         gifFps: settings.gifFps,
         gifQuality: settings.gifQuality,

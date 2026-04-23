@@ -14,8 +14,6 @@ pub struct Settings {
     pub auto_copy: bool,
     pub output_format: String,
     pub max_dimension: MaxDimension,
-    pub ocr_enabled: bool,
-    pub smart_masking: bool,
 
     pub max_recording_sec: u32,
     pub gif_fps: u32,
@@ -54,8 +52,6 @@ impl Default for Settings {
             auto_copy: true,
             output_format: "webp".into(),
             max_dimension: MaxDimension::default(),
-            ocr_enabled: true,
-            smart_masking: false,
 
             max_recording_sec: 30,
             gif_fps: 10,
@@ -177,8 +173,6 @@ pub const SETTINGS_KEYS: &[&str] = &[
     "outputFormat",
     "maxDimension.mode",
     "maxDimension.pixels",
-    "ocrEnabled",
-    "smartMasking",
     "maxRecordingSec",
     "gifFps",
     "gifQuality",
@@ -425,8 +419,6 @@ mod tests {
             "\"outputFormat\"",
             "\"maxDimension\"",
             "\"launchAtLogin\"",
-            "\"ocrEnabled\"",
-            "\"smartMasking\"",
             "\"maxRecordingSec\"",
             "\"gifFps\"",
             "\"gifQuality\"",
@@ -470,8 +462,6 @@ mod tests {
             launch_at_login: true,
             auto_copy: false,
             output_format: "png".into(),
-            ocr_enabled: false,
-            smart_masking: true,
             max_recording_sec: 60,
             gif_fps: 30,
             gif_quality: 75,
@@ -489,8 +479,6 @@ mod tests {
         assert_eq!(s.launch_at_login, restored.launch_at_login);
         assert_eq!(s.auto_copy, restored.auto_copy);
         assert_eq!(s.output_format, restored.output_format);
-        assert_eq!(s.ocr_enabled, restored.ocr_enabled);
-        assert_eq!(s.smart_masking, restored.smart_masking);
         assert_eq!(s.max_recording_sec, restored.max_recording_sec);
         assert_eq!(s.gif_fps, restored.gif_fps);
         assert_eq!(s.gif_quality, restored.gif_quality);

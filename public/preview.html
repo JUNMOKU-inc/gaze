@@ -605,6 +605,8 @@ function boot(attempt) {
     invoke('get_settings')
         .then(function(settings) {
             currentLanguage = ((settings && settings.language) || 'en').split(/[-_]/)[0];
+            // settings.autoCopy is true by default; only flip when explicitly false.
+            autoCopyEnabled = !(settings && settings.autoCopy === false);
             applyLanguage();
             renderPromptPreview();
         })
@@ -631,6 +633,7 @@ function boot(attempt) {
     var draftFramePending = false;
     var lastPreparedBundle = null;
     var autoCopyTimer = null;
+    var autoCopyEnabled = true;
     var currentLanguage = 'en';
 
     function t(key) {
@@ -927,6 +930,7 @@ function boot(attempt) {
 
     function scheduleAutoCopy() {
         if (isGif) return;
+        if (!autoCopyEnabled) return;
         if (autoCopyTimer) clearTimeout(autoCopyTimer);
         autoCopyTimer = setTimeout(function() {
             if (!annotations.length) {

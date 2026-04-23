@@ -144,18 +144,21 @@ pub fn trigger_area_capture(app: &AppHandle) {
         return;
     }
 
+    let auto_copy = crate::settings::load_settings(app).auto_copy;
     let app_handle = app.clone();
-    std::thread::spawn(move || match capture_flow::execute_area_capture() {
-        Ok(Some(metadata)) => {
-            show_preview_on_main_thread(&app_handle, metadata);
-        }
-        Ok(None) => {
-            tracing::info!("Area capture cancelled by user");
-        }
-        Err(e) => {
-            tracing::error!("Area capture failed: {e}");
-        }
-    });
+    std::thread::spawn(
+        move || match capture_flow::execute_area_capture(auto_copy) {
+            Ok(Some(metadata)) => {
+                show_preview_on_main_thread(&app_handle, metadata);
+            }
+            Ok(None) => {
+                tracing::info!("Area capture cancelled by user");
+            }
+            Err(e) => {
+                tracing::error!("Area capture failed: {e}");
+            }
+        },
+    );
 }
 
 /// Trigger window capture. Runs in a background thread since screencapture blocks.
@@ -164,18 +167,21 @@ pub fn trigger_window_capture(app: &AppHandle) {
         return;
     }
 
+    let auto_copy = crate::settings::load_settings(app).auto_copy;
     let app_handle = app.clone();
-    std::thread::spawn(move || match capture_flow::execute_window_capture() {
-        Ok(Some(metadata)) => {
-            show_preview_on_main_thread(&app_handle, metadata);
-        }
-        Ok(None) => {
-            tracing::info!("Window capture cancelled by user");
-        }
-        Err(e) => {
-            tracing::error!("Window capture failed: {e}");
-        }
-    });
+    std::thread::spawn(
+        move || match capture_flow::execute_window_capture(auto_copy) {
+            Ok(Some(metadata)) => {
+                show_preview_on_main_thread(&app_handle, metadata);
+            }
+            Ok(None) => {
+                tracing::info!("Window capture cancelled by user");
+            }
+            Err(e) => {
+                tracing::error!("Window capture failed: {e}");
+            }
+        },
+    );
 }
 
 /// Trigger fullscreen capture. Runs in a background thread for consistency.
@@ -184,18 +190,21 @@ pub fn trigger_fullscreen_capture(app: &AppHandle) {
         return;
     }
 
+    let auto_copy = crate::settings::load_settings(app).auto_copy;
     let app_handle = app.clone();
-    std::thread::spawn(move || match capture_flow::execute_fullscreen_capture() {
-        Ok(Some(metadata)) => {
-            show_preview_on_main_thread(&app_handle, metadata);
-        }
-        Ok(None) => {
-            tracing::error!("Fullscreen capture produced no output");
-        }
-        Err(e) => {
-            tracing::error!("Fullscreen capture failed: {e}");
-        }
-    });
+    std::thread::spawn(
+        move || match capture_flow::execute_fullscreen_capture(auto_copy) {
+            Ok(Some(metadata)) => {
+                show_preview_on_main_thread(&app_handle, metadata);
+            }
+            Ok(None) => {
+                tracing::error!("Fullscreen capture produced no output");
+            }
+            Err(e) => {
+                tracing::error!("Fullscreen capture failed: {e}");
+            }
+        },
+    );
 }
 
 /// Play a macOS system sound for audio feedback.
@@ -241,6 +250,7 @@ pub fn toggle_gif_recording(app: &AppHandle) {
         let _ = app.run_on_main_thread(move || {
             crate::preview_window::hide_recording_indicator(&app_for_hide);
         });
+        let auto_copy = crate::settings::load_settings(app).auto_copy;
         let app_handle = app.clone();
         std::thread::spawn(move || {
             match crate::recording::stop_recording(handle) {
@@ -255,8 +265,11 @@ pub fn toggle_gif_recording(app: &AppHandle) {
                     // Read GIF and prepare preview data
                     if let Ok(gif_bytes) = std::fs::read(&result.gif_path) {
                         // Copy to clipboard
-                        if let Err(e) = crate::clipboard::copy_encoded_to_clipboard(&gif_bytes) {
-                            tracing::warn!("Failed to copy GIF to clipboard: {e}");
+                        if auto_copy {
+                            if let Err(e) = crate::clipboard::copy_encoded_to_clipboard(&gif_bytes)
+                            {
+                                tracing::warn!("Failed to copy GIF to clipboard: {e}");
+                            }
                         }
 
                         // Show GIF preview
